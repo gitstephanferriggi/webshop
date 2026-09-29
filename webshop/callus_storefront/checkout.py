@@ -325,6 +325,8 @@ def _record_payment(doc, session):
     invoice.insert(ignore_permissions=True)
     if cents(invoice.rounded_total or invoice.grand_total) != doc.amount_minor:
         fail("The paid invoice total needs a staff review.")
+    # Set only after Stripe session/payment validation, never from a customer group.
+    invoice.flags.callus_verified_checkout = doc.name
     invoice.submit()
     pe = get_payment_entry("Sales Invoice", invoice.name, bank_account=doc.payment_account,
         bank_amount=doc.amount_minor/100, ignore_permissions=True)

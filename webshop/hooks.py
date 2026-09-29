@@ -37,6 +37,9 @@ doctype_js = {
 }
 
 doc_events = {
+    "Sales Invoice": {
+        "before_submit": "webshop.callus_storefront.notifications.mark_website_invoice",
+    },
     "Item": {
         "on_update": [
             "webshop.webshop.crud_events.item.update_website_item.execute",

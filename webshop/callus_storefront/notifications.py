@@ -9,7 +9,7 @@ from frappe.utils import validate_email_address
 CUSTOMER = 'New Website Order - Customer'
 BUSINESS = 'Website Sales Notifications Internally'
 DELIVERY_RULE = 'Delivery Fee - Orders Under 35 Euros'
-CONDITION = 'doc.docstatus == 1 and doc.customer_group == "Website" and not doc.is_return'
+CONDITION = 'doc.docstatus == 1 and not doc.is_return and not doc.is_pos and not doc.get("is_consolidated") and not doc.get("pos_profile") and doc.flags.get("callus_website_order")'
 
 ADDRESS = '''{% if address %}{{ address.address_line1 | e }}<br>{% if address.address_line2 %}{{ address.address_line2 | e }}<br>{% endif %}{{ address.city | e }} {{ (address.pincode or '') | e }}<br>{{ address.country | e }}{% else %}Please contact the shop to confirm the address.{% endif %}'''
 
@@ -72,3 +72,38 @@ def configure_delivery(rule_name: str):
     settings.delivery_rule=rule.name
     settings.save(ignore_permissions=True)
     return {'delivery_rule':rule.name}
+
+
+def mark_website_invoice(doc, method=None):
+    """Classify this invoice's origin before submit; customer group is irrelevant.
+
+    Flags are per-request and are recalculated, not editable invoice fields.
+    The new checkout supplies its verified-payment context. Legacy webshop
+    orders must trace back to submitted Shopping Cart orders and quotations.
+    """
+    doc.flags.callus_website_order = False
+    if doc.is_return or doc.is_pos or doc.get('is_consolidated') or doc.get('pos_profile') or not doc.items:
+        return
+    if any(row.get('pos_invoice') or not row.sales_order for row in doc.items):
+        return
+    order_names = {row.sales_order for row in doc.items}
+    checkout_name = doc.flags.get('callus_verified_checkout')
+    if checkout_name:
+        checkout = frappe.get_doc('Callus Checkout', checkout_name)
+        doc.flags.callus_website_order = bool(
+            order_names == {checkout.sales_order} and checkout.stripe_session
+            and checkout.customer == doc.customer
+            and frappe.db.get_value("Sales Order", checkout.sales_order, "company") == doc.company
+            and checkout.status in ('Pending', 'Paid')
+        )
+        return
+    for name in order_names:
+        order = frappe.get_doc('Sales Order', name)
+        if order.docstatus != 1 or order.order_type != 'Shopping Cart' or order.customer != doc.customer or order.company != doc.company:
+            return
+        quotations = {row.prevdoc_docname for row in order.items}
+        if not quotations or None in quotations or '' in quotations:
+            return
+        if any(frappe.db.get_value('Quotation', name, 'order_type') != 'Shopping Cart' for name in quotations):
+            return
+    doc.flags.callus_website_order = True

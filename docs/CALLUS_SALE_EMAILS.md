@@ -7,7 +7,7 @@ Production has two enabled Sales Invoice / Submit email Notifications:
 - `New Website Order - Customer`: originally sent to both invoice `owner` and `contact_email`.
 - `Website Sales Notifications Internally`: sent to the existing `Leads Email` role and existing CC/BCC recipients.
 
-Both originally matched `customer_group == "Website"`, including return invoices. The refreshed condition requires submitted, non-return Website invoices. The customer recipient is `contact_email` only. Production business recipients are preserved by the installer. Existing invoice PDF attachments and sender settings are preserved.
+Both originally matched `customer_group == "Website"`, including return invoices. The refreshed condition requires a submitted, non-return invoice with verified website-order origin. A server hook checks the paid checkout context or legacy Shopping Cart order/quotation chain. Customer group does not identify the origin. POS, POS-Awesome consolidated invoices, POS-linked items and mixed manual invoices are excluded. Deploy this hook before enabling the notification condition; without it the condition suppresses emails. The customer recipient is `contact_email` only. Production business recipients are preserved by the installer. Existing invoice PDF attachments and sender settings are preserved.
 
 The active shipping rule is `Delivery Fee - Orders Under 35 Euros`. It applies to Malta, Selling, and **Net Total** in company currency:
 
