@@ -65,6 +65,9 @@ The earlier visual tests did not create orders. The checkout-candidate tests cre
 
 ## Design asset provenance
 
+The official transparent Callus logo is bundled unchanged as `webshop/public/callus/callus-logo.png`, sourced from https://www.callusgardencentre.com/wp-content/uploads/2023/05/Logo-Transparent.png. It replaces the text wordmark in all 15 page headers. The existing storefront palette is unchanged.
+
+
 The hero is a generated editorial scene, not a photograph of the actual premises or a promise that pictured pots are sold as a set. Product photography is from the actual catalogue.
 
 Generated with the built-in image-generation tool; web asset: `webshop/public/callus/garden-hero.webp`. Prompt:
