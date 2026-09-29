@@ -1,6 +1,6 @@
-# Callus storefront — visual preview 1
+# Callus storefront — checkout candidate 2
 
-This release replaces the upstream merchandise demo with a Callus Garden Centre storefront. It is a **visual and browsing UAT release, not a transaction-ready checkout**.
+This release adds a server-backed guest checkout to the Callus storefront. **The new backend is locally verified, but must be deployed, configured and verified on UAT before customer use.** See [CHECKOUT_RELEASE.md](CHECKOUT_RELEASE.md) for the activation and acceptance procedure.
 
 ## Delivered
 
@@ -13,9 +13,9 @@ This release replaces the upstream merchandise demo with a Callus Garden Centre 
 
 ## Important boundaries
 
-The guest checkout is a form-validation and review prototype. It does **not** create Customers, Quotations, Sales Orders or Payment Requests. It does not call Stripe. Contact/address entries remain in the page and are not persisted or submitted. The payment button is disabled and the page identifies itself as a preview.
+The checkout creates a separate guest Customer, contact, billing address and draft Sales Order from validated product codes and quantities. ERPNext calculates prices, taxes and delivery. The customer reviews the result before opening Stripe Checkout. Verified payment creates a Sales Invoice and Payment Entry; a full refund of an undelivered order creates a credit note and outward Payment Entry. The shop handles physical fulfilment separately.
 
-Stripe is the selected provider, but its test configuration and guest checkout backend remain to be implemented and tested. This requires server-side repricing/taxes/shipping, stock checks at submission, bounded quantities, session isolation, idempotency, verified Stripe callbacks, payment reconciliation and recovery tests. Browser basket data must never be trusted as an order total. No successful payment or order-completion screen has been fabricated.
+Checkout is disabled by default through the new **Callus Checkout Settings**. Credentials, mode, webhook secret, exact site URL and enablement are site settings and are never committed or automatically enabled by a migration. Existing legacy checkout settings remain unchanged. Browser basket totals are estimates only. The server quote is valid for 30 minutes; its total is fixed during that quote. Changing prices afterward does not silently increase the payment.
 
 Shop / Shop Pay identity integration is not implemented. Existing Frappe sign-in is linked from the account entry page; that existing sign-in form has not been redesigned. Production privacy/terms, delivery charges, fulfilment promises and returns policy need merchant approval before launch. The current help pages make no unverified delivery or refund commitments.
 
@@ -61,7 +61,7 @@ Revert homepage settings to their recorded prior values and restore only the bac
 - Mobile checks at 390px: menu, category/filter interaction, product detail, unavailable-item handling and empty search. Narrow basket at 320px has no horizontal overflow.
 - Checkout and the scheduler setting remain zero; no enabled outgoing email accounts or email notifications were found at final verification.
 
-The tests do not establish payment, fulfilment, transaction-security or production readiness. No order or payment was created by the new storefront tests.
+The earlier visual tests did not create orders. The checkout-candidate tests create synthetic orders, invoices, payments and credit notes only in a separate local database, with Stripe calls simulated. Real Stripe credentials, hosted checkout/SCA, callbacks from Stripe and the deployed UAT version remain to be verified. No real charge or refund has been made.
 
 ## Design asset provenance
 

@@ -76,7 +76,7 @@ class CatalogueTests(unittest.TestCase):
             self.assertEqual(doc['page_data_script'],SCRIPT)
             self.assertNotIn('callusuat',path.read_text())
         self.assertEqual(count,15)
-    def test_builder_script_types_and_no_transaction_calls(self):
+    def test_builder_script_types_and_no_legacy_transaction_calls(self):
         for suffix,kind in [('css','CSS'),('js','JavaScript')]:
             path=ROOT/f'webshop/builder_files/client_scripts/callus_storefront_{suffix}/callus_storefront_{suffix}.json'
             self.assertEqual(json.loads(path.read_text())['script_type'],kind)

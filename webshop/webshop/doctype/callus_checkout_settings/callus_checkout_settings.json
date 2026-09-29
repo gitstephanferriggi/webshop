@@ -1,0 +1,82 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Checkout Settings",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "autoname": "",
+ "field_order": [
+  "enabled",
+  "site_url",
+  "allow_live_payments",
+  "stripe_settings",
+  "webhook_secret",
+  "delivery_rule",
+  "maximum_order_total",
+  "webhook_endpoint"
+ ],
+ "fields": [
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "site_url",
+   "fieldtype": "Data",
+   "label": "Site Url",
+   "description": "Exact HTTPS origin for this site. Required; prevents accidental enablement on a copied site."
+  },
+  {
+   "fieldname": "allow_live_payments",
+   "fieldtype": "Check",
+   "label": "Allow Live Payments",
+   "default": "0"
+  },
+  {
+   "fieldname": "stripe_settings",
+   "fieldtype": "Link",
+   "label": "Stripe Settings",
+   "options": "Stripe Settings"
+  },
+  {
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  },
+  {
+   "fieldname": "delivery_rule",
+   "fieldtype": "Link",
+   "label": "Delivery Rule",
+   "options": "Shipping Rule",
+   "description": "Optional. Without a configured rule, checkout offers collection only."
+  },
+  {
+   "fieldname": "maximum_order_total",
+   "fieldtype": "Currency",
+   "label": "Maximum Order Total",
+   "default": "1000",
+   "options": "EUR"
+  },
+  {
+   "fieldname": "webhook_endpoint",
+   "fieldtype": "Data",
+   "label": "Stripe Webhook Endpoint",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "report": 1
+  }
+ ],
+ "track_changes": 1,
+ "modified": "2026-09-29 12:00:00.000000",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

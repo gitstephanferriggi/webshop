@@ -117,6 +117,12 @@ jobs:
         env:
           CI: 'Yes'
       
+      - name: Test guest checkout accounting and recovery
+        working-directory: /home/runner/frappe-bench/sites
+        run: |
+          ../env/bin/python ../apps/webshop/tests/run_checkout_integration.py test_site
+          ../env/bin/python ../apps/webshop/tests/checkout_http.py test_site
+
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         run: |

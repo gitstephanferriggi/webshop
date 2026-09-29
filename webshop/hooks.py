@@ -91,3 +91,6 @@ fixtures = [
         "filters": [["name", "like", "All Website Categories"]],
     }
 ]
+
+# Retries missed Stripe callbacks without depending on the customer return page.
+scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending"]}}

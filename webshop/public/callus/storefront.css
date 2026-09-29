@@ -11,3 +11,7 @@
 .cg-quickadd{display:flex;justify-content:center;align-items:center;gap:8px}.cg-image-fallback{display:grid;place-items:center;text-align:center;height:100%;min-height:110px;font-size:12px;color:var(--muted);padding:20px}
 
 .cg-detail-description{white-space:pre-line}
+
+/* Secondary checkout actions retain the storefront's typography. */
+.cg-app button.cg-link {appearance:none;background:none;border:0;border-bottom:1px solid currentColor;padding:4px 0;font:inherit;color:var(--green);cursor:pointer;text-align:left}
+.cg-app button.cg-link:disabled {opacity:.55;cursor:wait}

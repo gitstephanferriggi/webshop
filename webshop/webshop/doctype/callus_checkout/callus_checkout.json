@@ -1,0 +1,167 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Checkout",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "issingle": 0,
+ "autoname": "hash",
+ "field_order": [
+  "status",
+  "request_hash",
+  "expires_at",
+  "buyer",
+  "basket",
+  "customer",
+  "sales_order",
+  "amount_minor",
+  "summary",
+  "is_live",
+  "stripe_settings",
+  "payment_account",
+  "stripe_session",
+  "payment_intent",
+  "checkout_url",
+  "payment_entry",
+  "stripe_refund",
+  "refund_entry",
+  "sales_invoice",
+  "credit_note",
+  "stripe_request"
+ ],
+ "fields": [
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending\nPaid\nExpired\nRefund Pending\nRefunded",
+   "default": "Draft"
+  },
+  {
+   "fieldname": "request_hash",
+   "fieldtype": "Data",
+   "label": "Request Hash"
+  },
+  {
+   "fieldname": "expires_at",
+   "fieldtype": "Int",
+   "label": "Expires At"
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Code",
+   "label": "Buyer",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "basket",
+   "fieldtype": "Code",
+   "label": "Basket",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "amount_minor",
+   "fieldtype": "Int",
+   "label": "Amount Minor"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Code",
+   "label": "Summary",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "is_live",
+   "fieldtype": "Check",
+   "label": "Is Live"
+  },
+  {
+   "fieldname": "stripe_settings",
+   "fieldtype": "Link",
+   "label": "Stripe Settings",
+   "options": "Stripe Settings"
+  },
+  {
+   "fieldname": "payment_account",
+   "fieldtype": "Link",
+   "label": "Payment Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "stripe_session",
+   "fieldtype": "Data",
+   "label": "Stripe Session",
+   "unique": 1
+  },
+  {
+   "fieldname": "payment_intent",
+   "fieldtype": "Data",
+   "label": "Payment Intent",
+   "unique": 1
+  },
+  {
+   "fieldname": "checkout_url",
+   "fieldtype": "Small Text",
+   "label": "Checkout Url"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "fieldname": "stripe_refund",
+   "fieldtype": "Data",
+   "label": "Stripe Refund"
+  },
+  {
+   "fieldname": "refund_entry",
+   "fieldtype": "Link",
+   "label": "Refund Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "credit_note",
+   "fieldtype": "Link",
+   "label": "Credit Note",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "stripe_request",
+   "fieldtype": "Code",
+   "label": "Stripe Request",
+   "options": "JSON"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "report": 1
+  }
+ ],
+ "track_changes": 1,
+ "modified": "2026-09-29 12:00:00.000000",
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
