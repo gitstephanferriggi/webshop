@@ -1,10 +1,10 @@
 {
  "doctype": "Builder Page",
  "modified": "2026-09-29 03:42:16.000000",
- "name": "all-products",
- "page_name": "all-products",
- "page_title": "Shop plants & garden essentials",
- "route": "store",
+ "name": "callus-contact",
+ "page_name": "callus-contact",
+ "page_title": "Visit & contact Callus",
+ "route": "contact-callus",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",
@@ -22,7 +22,7 @@
    "mobileStyles": {},
    "tabletStyles": {},
    "attributes": {
-    "data-page": "store"
+    "data-page": "contact"
    },
    "classes": [
     "cg-app"
@@ -53,8 +53,8 @@
      "classes": [],
      "children": [
       {
-       "blockId": "cg-store-content",
-       "blockName": "Store Content",
+       "blockId": "cg-contact-content",
+       "blockName": "Contact Content",
        "element": "div",
        "baseStyles": {},
        "mobileStyles": {},
@@ -62,7 +62,7 @@
        "attributes": {},
        "classes": [],
        "children": [],
-       "innerHTML": "<div class=\"cg-wrap cg-section\"><p>Loading your next favourite…</p><noscript>Please enable JavaScript to browse the catalogue, or call +356 9999 5135.</noscript></div>"
+       "innerHTML": "<div class=\"cg-wrap\"><div class=\"cg-breadcrumb\"><a href=\"/shop\">Home</a> / Visit & contact</div><div class=\"cg-page-heading\"><h1>Let’s grow something good.</h1><p>Choosing a plant, planning a garden or looking for something special? We’re here to help.</p></div><div class=\"cg-help-layout\"><div class=\"cg-contact-card\"><h2>Come and say hello.</h2><p>Callus Garden Centre<br>Mqabba Road, Siġġiewi<br>SGW 2600, Malta</p><p><a href=\"tel:+35699995135\">+356 9999 5135</a><br><a href=\"mailto:info@callusgardencentre.com\">info@callusgardencentre.com</a></p><a class=\"cg-btn\" href=\"https://www.google.com/maps/search/?api=1&query=Callus+Garden+Centre+Mqabba+Road+Siggiewi+Malta\" target=\"_blank\" rel=\"noopener\">Get directions ↗</a><p class=\"cg-note\" style=\"margin-top:20px\">Please call to confirm current opening hours before travelling.</p></div><div class=\"cg-faq\"><h2>A little help, right here.</h2><details open><summary>Can you help me choose a plant?</summary><p>Of course. Tell us about the space, available light and what you’d like to grow. Our team can help you explore the options.</p></details><details><summary>Can I check availability before visiting?</summary><p>Please call with the product name or code. Availability can change throughout the day.</p></details><details><summary>Can I arrange delivery?</summary><p>Contact us with your location and the products you have in mind. We will confirm arrangements and any charge before you order.</p></details></div></div></div>"
       }
      ]
     },

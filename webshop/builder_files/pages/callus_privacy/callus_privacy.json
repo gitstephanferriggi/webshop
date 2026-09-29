@@ -1,10 +1,10 @@
 {
  "doctype": "Builder Page",
  "modified": "2026-09-29 03:42:16.000000",
- "name": "all-products",
- "page_name": "all-products",
- "page_title": "Shop plants & garden essentials",
- "route": "store",
+ "name": "callus-privacy",
+ "page_name": "callus-privacy",
+ "page_title": "Privacy & cookies",
+ "route": "privacy-callus",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",
@@ -22,7 +22,7 @@
    "mobileStyles": {},
    "tabletStyles": {},
    "attributes": {
-    "data-page": "store"
+    "data-page": "privacy"
    },
    "classes": [
     "cg-app"
@@ -53,8 +53,8 @@
      "classes": [],
      "children": [
       {
-       "blockId": "cg-store-content",
-       "blockName": "Store Content",
+       "blockId": "cg-privacy-content",
+       "blockName": "Privacy Content",
        "element": "div",
        "baseStyles": {},
        "mobileStyles": {},
@@ -62,7 +62,7 @@
        "attributes": {},
        "classes": [],
        "children": [],
-       "innerHTML": "<div class=\"cg-wrap cg-section\"><p>Loading your next favourite…</p><noscript>Please enable JavaScript to browse the catalogue, or call +356 9999 5135.</noscript></div>"
+       "innerHTML": "<div class=\"cg-wrap\"><div class=\"cg-breadcrumb\"><a href=\"/shop\">Home</a> / Privacy & cookies</div><div class=\"cg-page-heading\"><h1>Your privacy matters.</h1></div><div class=\"cg-page-body\"><h2>About this test storefront</h2><p>This is a review version of the Callus Garden Centre website. Guest checkout details entered in the preview stay on the page; the preview does not submit an order or take a payment.</p><h2>Basket and saved favourites</h2><p>The storefront uses your browser’s local storage to remember your basket and saved products. These are specific to this browser. You can remove individual products or clear them through your browser’s site-data settings.</p><h2>Site services</h2><p>The existing shop platform may set session cookies and collect server logs. Website fonts are loaded from Google Fonts. The final production privacy and cookie notice, including the shop’s account, order, payment and analytics processing, must be reviewed before launch.</p><h2>Contact</h2><p>For questions about your information, contact Blooming Garden Ltd at <a href=\"mailto:info@callusgardencentre.com\">info@callusgardencentre.com</a>.</p></div></div>"
       }
      ]
     },

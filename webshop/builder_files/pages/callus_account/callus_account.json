@@ -1,10 +1,10 @@
 {
  "doctype": "Builder Page",
  "modified": "2026-09-29 03:42:16.000000",
- "name": "all-products",
- "page_name": "all-products",
- "page_title": "Shop plants & garden essentials",
- "route": "store",
+ "name": "callus-account",
+ "page_name": "callus-account",
+ "page_title": "My account",
+ "route": "account-callus",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",
@@ -22,7 +22,7 @@
    "mobileStyles": {},
    "tabletStyles": {},
    "attributes": {
-    "data-page": "store"
+    "data-page": "account"
    },
    "classes": [
     "cg-app"
@@ -53,8 +53,8 @@
      "classes": [],
      "children": [
       {
-       "blockId": "cg-store-content",
-       "blockName": "Store Content",
+       "blockId": "cg-account-content",
+       "blockName": "Account Content",
        "element": "div",
        "baseStyles": {},
        "mobileStyles": {},
@@ -62,7 +62,7 @@
        "attributes": {},
        "classes": [],
        "children": [],
-       "innerHTML": "<div class=\"cg-wrap cg-section\"><p>Loading your next favourite…</p><noscript>Please enable JavaScript to browse the catalogue, or call +356 9999 5135.</noscript></div>"
+       "innerHTML": "<div class=\"cg-wrap\"><div class=\"cg-breadcrumb\"><a href=\"/shop\">Home</a> / My account</div><div class=\"cg-page-heading\"><h1>Welcome back.</h1><p>A little easier to pick up where you left off.</p></div><div class=\"cg-help-layout\"><div class=\"cg-contact-card\"><h2>Your Callus account</h2><p>Sign in with your existing shop account to access your account and orders.</p><a class=\"cg-btn\" href=\"/login?redirect-to=%2Fshop\">Sign in to my account →</a></div><div><h2>Just here to browse?</h2><p>Explore the shop, save your favourites and build your basket without an account.</p><a class=\"cg-link\" href=\"/store\">Continue exploring →</a><p class=\"cg-note\" style=\"margin-top:25px\">Need help with an existing account? Contact our team.</p></div></div></div>"
       }
      ]
     },

@@ -1,10 +1,10 @@
 {
  "doctype": "Builder Page",
  "modified": "2026-09-29 03:42:16.000000",
- "name": "all-products",
- "page_name": "all-products",
- "page_title": "Shop plants & garden essentials",
- "route": "store",
+ "name": "callus-saved",
+ "page_name": "callus-saved",
+ "page_title": "Your saved favourites",
+ "route": "saved",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",
@@ -22,7 +22,7 @@
    "mobileStyles": {},
    "tabletStyles": {},
    "attributes": {
-    "data-page": "store"
+    "data-page": "saved"
    },
    "classes": [
     "cg-app"
@@ -53,8 +53,8 @@
      "classes": [],
      "children": [
       {
-       "blockId": "cg-store-content",
-       "blockName": "Store Content",
+       "blockId": "cg-saved-content",
+       "blockName": "Saved Content",
        "element": "div",
        "baseStyles": {},
        "mobileStyles": {},

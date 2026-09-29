@@ -1,10 +1,10 @@
 {
  "doctype": "Builder Page",
  "modified": "2026-09-29 03:42:16.000000",
- "name": "all-products",
- "page_name": "all-products",
+ "name": "callus-all-products",
+ "page_name": "callus-all-products",
  "page_title": "Shop plants & garden essentials",
- "route": "store",
+ "route": "all-products",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",

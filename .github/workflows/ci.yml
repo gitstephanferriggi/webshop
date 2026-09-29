@@ -13,7 +13,10 @@ on:
     - cron: "0 0 * * *"
 
 env:
-  WEBSHOP_BRANCH: ${{ github.base_ref || github.ref_name }}
+  FRAPPE_BRANCH: version-15
+  ERPNEXT_BRANCH: version-15
+  PAYMENTS_BRANCH: master
+  BUILDER_BRANCH: v1.34.0
 
 concurrency:
   group: develop-webshop-${{ github.event.number }}
@@ -55,12 +58,15 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       
+      - name: Test Callus catalogue and exports
+        run: python -m unittest discover -s tests -p "test_callus*.py" -v
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
           check-latest: true
       
       - name: Cache pip
@@ -90,7 +96,7 @@ jobs:
       - name: Setup
         run: |
           pip install frappe-bench
-          bench init --frappe-branch $WEBSHOP_BRANCH --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
+          bench init --frappe-branch $FRAPPE_BRANCH --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
       
@@ -98,11 +104,14 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: |
           bench setup requirements --dev
-          bench get-app erpnext --branch $WEBSHOP_BRANCH
-          bench get-app payments --branch $WEBSHOP_BRANCH
+          bench get-app erpnext --branch $ERPNEXT_BRANCH
+          bench get-app payments --branch $PAYMENTS_BRANCH
+          bench get-app builder --branch $BUILDER_BRANCH
           bench get-app $GITHUB_WORKSPACE
           bench new-site --db-root-password root --admin-password admin test_site
           bench --site test_site install-app erpnext
+          bench --site test_site install-app payments
+          bench --site test_site install-app builder
           bench --site test_site install-app webshop
           bench build
         env:
