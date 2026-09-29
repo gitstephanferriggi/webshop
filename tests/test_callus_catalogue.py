@@ -28,7 +28,7 @@ def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=
         if dt=='Sales Invoice':assert kw['filters']['docstatus']==1 and kw['filters']['is_return']==0
         return rows[dt]
     utils=SimpleNamespace(getdate=lambda v=None:datetime.date.fromisoformat(str(v)) if v else today,add_days=lambda d,n:d+datetime.timedelta(days=n))
-    frappe=SimpleNamespace(get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
+    frappe=SimpleNamespace(db=SimpleNamespace(exists=lambda *args:False),get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
     data=Row();exec(SCRIPT,{'frappe':frappe,'data':data})
     return data,calls
 
@@ -75,7 +75,7 @@ class CatalogueTests(unittest.TestCase):
             self.assertEqual(doc['blocks'][0]['element'],'body')
             self.assertEqual(doc['page_data_script'],SCRIPT)
             self.assertNotIn('callusuat',path.read_text())
-        self.assertEqual(count,15)
+        self.assertEqual(count,19)
     def test_builder_script_types_and_no_legacy_transaction_calls(self):
         for suffix,kind in [('css','CSS'),('js','JavaScript')]:
             path=ROOT/f'webshop/builder_files/client_scripts/callus_storefront_{suffix}/callus_storefront_{suffix}.json'

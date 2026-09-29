@@ -17,7 +17,7 @@ The checkout creates a separate guest Customer, contact, billing address and dra
 
 Checkout is disabled by default through the new **Callus Checkout Settings**. Credentials, mode, webhook secret, exact site URL and enablement are site settings and are never committed or automatically enabled by a migration. Existing legacy checkout settings remain unchanged. Browser basket totals are estimates only. The server quote is valid for 30 minutes; its total is fixed during that quote. Changing prices afterward does not silently increase the payment.
 
-Shop / Shop Pay identity integration is not implemented. Existing Frappe sign-in is linked from the account entry page; that existing sign-in form has not been redesigned. Production privacy/terms, delivery charges, fulfilment promises and returns policy need merchant approval before launch. The current help pages make no unverified delivery or refund commitments.
+Shop / Shop Pay identity integration is not implemented. Customer sign-in, registration and password recovery use matching Builder pages backed by the native Frappe account APIs. See `docs/CALLUS_ACCOUNTS.md` for the email requirement and verification status. Production privacy/terms, delivery charges, fulfilment promises and returns policy need merchant approval before launch. The current help pages make no unverified delivery or refund commitments.
 
 The browsing price model does not claim to implement quantity-dependent/customer-specific pricing rules. ERPNext must be authoritative during transaction creation. Existing legacy product URLs retain their existing ERPNext handling; an SEO redirect plan is still required before production rollout.
 
@@ -41,9 +41,9 @@ Builder's standard importer reads the page and script records; the page data scr
 1. Take a site backup and export the existing Builder pages, scripts and relevant homepage settings.
 2. Deploy the reviewed fork revision to **UAT only** in Frappe Cloud. Its update workflow supports selecting which sites receive a release. A common bench group does not itself require production to be selected. Do not use a shared in-place update that would update production unintentionally.
 3. Verify app revisions against `release.json`; version labels alone are not exact commit locks. Record the actual Frappe Cloud app commit IDs before production approval.
-4. Import the records using Builder's standard-page sync during migration. Verify all 15 routes and shared scripts. On UAT, apply `disable_indexing = 1` to the pages and keep checkout, outgoing email and scheduled activity disabled.
+4. Import the records using Builder's standard-page sync during migration. Verify all 19 routes and shared scripts. On UAT, apply `disable_indexing = 1` to the pages and keep checkout, outgoing email and scheduled activity disabled.
 5. Set Builder Settings `home_page = shop`, `disable_auto_dark_mode = 1`; set Website Settings `home_page = shop`. These are explicit site settings, not automatic shared bench modifications.
-6. Reapply on a fresh isolated copy of production before approving a production release. Verify there are exactly 15 distinct storefront routes, with no duplicate pages or scripts. The API-based UAT apply was repeated without duplication; a fresh-copy app deployment rehearsal is still outstanding.
+6. Reapply on a fresh isolated copy of production before approving a production release. Verify there are exactly 19 distinct storefront routes, with no duplicate pages or scripts. The API-based UAT apply was repeated without duplication; a fresh-copy app deployment rehearsal is still outstanding.
 7. Never restore the UAT database over production. Keep environment credentials, payment mode, mail settings and live business data out of the portable release.
 
 The UAT API deployment uses `/files/callus-garden-hero.webp` because the app asset is not deployed yet; the portable source uses `/assets/webshop/callus/garden-hero.webp`. No UAT hostname or credential is embedded in the source.
@@ -65,7 +65,7 @@ The earlier visual tests did not create orders. The checkout-candidate tests cre
 
 ## Design asset provenance
 
-The official transparent Callus logo is bundled unchanged as `webshop/public/callus/callus-logo.png`, sourced from https://www.callusgardencentre.com/wp-content/uploads/2023/05/Logo-Transparent.png. It replaces the text wordmark in all 15 page headers. The existing storefront palette is unchanged.
+The official transparent Callus logo is bundled unchanged as `webshop/public/callus/callus-logo.png`, sourced from https://www.callusgardencentre.com/wp-content/uploads/2023/05/Logo-Transparent.png. It replaces the text wordmark in all 19 page headers. The existing storefront palette is unchanged.
 
 
 The hero is a generated editorial scene, not a photograph of the actual premises or a promise that pictured pots are sold as a set. Product photography is from the actual catalogue.

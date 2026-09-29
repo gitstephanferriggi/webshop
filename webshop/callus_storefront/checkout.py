@@ -208,7 +208,12 @@ def _new_order(doc, items, buyer, shop, settings):
     if amount < 50 or amount > cents(settings.maximum_order_total):
         fail("This order is outside the online payment limit. Please contact the shop.")
     doc.customer, doc.sales_order, doc.amount_minor = customer.name, order.name, amount
-    doc.summary = json.dumps({"currency":"EUR","total":amount/100,
+    delivery_fee = 0
+    if order.shipping_rule:
+        rule = frappe.get_cached_doc("Shipping Rule", order.shipping_rule)
+        delivery_fee = sum(row.tax_amount for row in order.taxes
+            if row.charge_type == "Actual" and row.account_head == rule.account and row.description == rule.label)
+    doc.summary = json.dumps({"currency":"EUR","total":amount/100,"delivery_fee":delivery_fee,
         "net_total":order.net_total,"taxes_and_charges":order.total_taxes_and_charges,
         "fulfilment":buyer["delivery"],
         "items":[{"id":x.item_code,"name":x.item_name,"qty":x.qty,"amount":x.amount} for x in order.items]})

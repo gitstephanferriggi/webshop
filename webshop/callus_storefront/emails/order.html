@@ -1,0 +1,25 @@
+{% set order_name = doc.items[0].sales_order if doc.items and doc.items[0].sales_order else None %}
+{% set order = frappe.get_doc('Sales Order', order_name) if order_name else None %}
+{% set is_delivery = (order.shipping_address_name if order else doc.shipping_address_name) %}
+{% set address_name = doc.shipping_address_name if is_delivery else doc.customer_address %}
+{% set address = frappe.get_doc('Address', address_name) if address_name else None %}
+{% set reference = order_name or doc.name %}
+{% set shipping_rule = frappe.get_doc('Shipping Rule', order.shipping_rule) if order and order.shipping_rule else None %}
+{% set shipping = namespace(amount=0) %}
+{% for tax in doc.taxes %}{% if shipping_rule and tax.account_head == shipping_rule.account and tax.description == shipping_rule.label %}{% set shipping.amount = shipping.amount + tax.tax_amount %}{% endif %}{% endfor %}
+{% macro amount(value) %}{{ frappe.utils.fmt_money(value or 0, currency=doc.currency) }}{% endmacro %}
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">__PREHEADER__</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f6f0;font-family:Arial,Helvetica,sans-serif;color:#24392e;padding:24px 10px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border:1px solid #e0e4d9;border-radius:8px;overflow:hidden">
+<tr><td align="center" style="background:#f7f6f0;padding:24px"><img src="https://www.callusgardencentre.com/wp-content/uploads/2023/05/Logo-Transparent.png" width="104" height="80" alt="Callus Garden Centre" style="display:block;border:0;max-width:104px;height:auto"></td></tr>
+<tr><td style="background:#244c3a;color:#ffffff;padding:30px 32px"><p style="font-size:11px;letter-spacing:2px;margin:0 0 14px">__EYEBROW__</p><h1 style="font-family:Georgia,serif;font-weight:normal;font-size:30px;line-height:1.2;margin:0">__TITLE__</h1></td></tr>
+<tr><td style="padding:28px 32px;font-size:15px;line-height:1.7">__INTRO__
+<table role="presentation" width="100%" style="background:#e9eddf;margin:22px 0;padding:16px;font-size:13px"><tr><td><strong>Order {{ reference | e }}</strong><br>Invoice {{ doc.name | e }}<br>{{ frappe.utils.formatdate(doc.posting_date) }}</td><td align="right" style="vertical-align:top"><strong>{{ 'Delivery in Malta' if is_delivery else 'Collection' }}</strong><br>{{ amount(doc.rounded_total or doc.grand_total) }}</td></tr></table>
+<h2 style="font-family:Georgia,serif;font-size:23px;font-weight:normal">__ITEM_HEADING__</h2>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;line-height:1.5"><thead><tr><th align="left" style="padding:10px 0;border-bottom:1px solid #dfe4d8">Product</th><th align="center" style="padding:10px 8px;border-bottom:1px solid #dfe4d8">Qty</th><th align="right" style="padding:10px 0;border-bottom:1px solid #dfe4d8">Before VAT</th></tr></thead><tbody>{% for item in doc.items %}<tr><td style="padding:13px 0;border-bottom:1px solid #edf0e8;word-break:break-word">{{ item.item_name | e }}<br><span style="font-size:11px;color:#63715f">{{ item.item_code | e }}</span></td><td align="center" style="padding:13px 8px;border-bottom:1px solid #edf0e8">{{ item.qty | int if item.qty == item.qty | int else item.qty }} {{ item.uom | e }}</td><td align="right" style="padding:13px 0;border-bottom:1px solid #edf0e8;white-space:nowrap">{{ amount(item.net_amount) }}</td></tr>{% endfor %}</tbody></table>
+<table role="presentation" width="100%" style="font-size:13px;margin:16px 0"><tr><td>Items before VAT</td><td align="right">{{ amount(doc.net_total) }}</td></tr><tr><td>VAT &amp; other taxes</td><td align="right">{{ amount(doc.total_taxes_and_charges - shipping.amount) }}</td></tr><tr><td>{{ 'Malta delivery' if is_delivery else 'Collection' }}</td><td align="right">{{ amount(shipping.amount) if is_delivery else 'Free' }}</td></tr>{% if doc.rounding_adjustment %}<tr><td>Rounding</td><td align="right">{{ amount(doc.rounding_adjustment) }}</td></tr>{% endif %}<tr><td style="padding-top:12px;font-size:18px"><strong>Total</strong></td><td align="right" style="padding-top:12px;font-size:18px"><strong>{{ amount(doc.rounded_total or doc.grand_total) }}</strong></td></tr></table>
+__FULFILMENT__
+__CONTACT__
+<p style="margin-top:26px">__CLOSING__</p>
+</td></tr><tr><td style="padding:22px 32px;background:#f7f6f0;font-size:12px;line-height:1.8;color:#596854"><strong>Callus Garden Centre</strong><br>Mqabba Road, Siġġiewi, Malta<br><a href="mailto:sales@callusgardencentre.com" style="color:#244c3a">sales@callusgardencentre.com</a> · <a href="tel:+35621462229" style="color:#244c3a">+356 2146 2229</a><br>Blooming Garden Ltd</td></tr>
+</table></td></tr></table>

@@ -196,8 +196,108 @@ class CheckoutIntegrationTests(unittest.TestCase):
         try:
             result=self.prepare()
             self.assertEqual(result['summary']['total'],12)
+            self.assertEqual(result['summary']['delivery_fee'],5)
+            self.pay();self.mark_paid();api.status(self.token)
+            invoice=frappe.get_doc('Sales Invoice',api._doc(self.token).sales_invoice)
+            from webshop.callus_storefront.notifications import email_template
+            from pathlib import Path
+            preview=Path(__file__).resolve().parents[2]/'outputs/storefront-build/sale-email-previews';preview.mkdir(exist_ok=True)
+            for audience in ('customer','business'):
+                html=frappe.render_template(email_template(audience),{'doc':invoice})
+                self.assertIn('Delivery address',html)
+                self.assertIn('1 Garden Street',html)
+                self.assertNotIn('ready to collect',html)
+                self.assertIn(frappe.utils.fmt_money(5,currency='EUR'),html)
+                (preview/(audience+'-delivery.html')).write_text('<!doctype html><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+html)
         finally:
             settings.delivery_rule=None;settings.save();frappe.db.commit()
+    def test_delivery_configuration_requires_manager_and_preserves_payments(self):
+        from webshop.callus_storefront.notifications import configure_delivery
+        settings=frappe.get_single('Callus Checkout Settings')
+        original={key:settings.get(key) for key in ('enabled','site_url','stripe_settings','allow_live_payments','webhook_endpoint')}
+        frappe.set_user('Guest')
+        # Frappe bypasses only_for in test mode; exercise the real permission path.
+        frappe.flags.in_test=False
+        try:
+            with self.assertRaises(frappe.PermissionError):configure_delivery('untrusted')
+        finally:
+            frappe.flags.in_test=True;frappe.set_user('Administrator')
+        company=frappe.get_doc('Company',COMPANY)
+        rule=frappe.get_doc(dict(doctype='Shipping Rule',label='Manager Delivery '+self.token[:8],shipping_rule_type='Selling',company=COMPANY,
+            calculate_based_on='Fixed',shipping_amount=5,account=company.default_income_account,cost_center=company.cost_center,countries=[dict(country='Malta')])).insert()
+        try:
+            self.assertEqual(configure_delivery(rule.name)['delivery_rule'],rule.name)
+            settings.reload()
+            self.assertEqual(original,{key:settings.get(key) for key in original})
+            rule.disabled=1;rule.save()
+            with self.assertRaises(frappe.ValidationError):configure_delivery(rule.name)
+        finally:
+            settings.delivery_rule=None;settings.save();frappe.db.commit()
+
+    def test_existing_malta_delivery_threshold_and_collection(self):
+        company=frappe.get_doc('Company',COMPANY)
+        rule=frappe.get_doc(dict(doctype='Shipping Rule',label='Malta Boundary '+self.token[:8],shipping_rule_type='Selling',company=COMPANY,
+            calculate_based_on='Net Total',account=company.default_income_account,cost_center=company.cost_center,
+            conditions=[dict(from_value=0.01,to_value=35,shipping_amount=5)],countries=[dict(country='Malta')])).insert()
+        settings=frappe.get_single('Callus Checkout Settings');settings.delivery_rule=rule.name;settings.save()
+        price=frappe.db.get_value('Item Price',{'item_code':'CHECKOUT-BASIL','price_list':'Checkout Retail'},'name')
+        try:
+            for value,expected in [(34.99,5),(35,5),(35.01,0)]:
+                with self.subTest(net_total=value):
+                    frappe.db.set_value('Item Price',price,'price_list_rate',value)
+                    self.token=secrets.token_hex(32);self.buyer['delivery']='delivery'
+                    result=api.prepare(self.token,[dict(id='CHECKOUT-BASIL',qty=1)],self.buyer)
+                    self.assertEqual(result['summary']['delivery_fee'],expected)
+                    self.assertAlmostEqual(result['summary']['total'],value+expected,places=2)
+            account=frappe.db.get_value('Account',{'company':COMPANY,'account_type':'Tax','is_group':0},'name')
+            template=frappe.get_doc(dict(doctype='Sales Taxes and Charges Template',title='Delivery VAT '+self.token[:8],company=COMPANY,
+                taxes=[dict(charge_type='On Net Total',account_head=account,description='VAT 18%',rate=18,included_in_print_rate=1,cost_center=company.cost_center)])).insert()
+            for value,expected in [(41.30,5),(41.31,0)]:
+                frappe.db.set_value('Item Price',price,'price_list_rate',value)
+                self.token=secrets.token_hex(32)
+                with patch('erpnext.accounts.party.set_taxes',return_value=template.name):
+                    result=api.prepare(self.token,[dict(id='CHECKOUT-BASIL',qty=1)],self.buyer)
+                self.assertEqual(result['summary']['delivery_fee'],expected)
+            self.token=secrets.token_hex(32);self.buyer['delivery']='collection'
+            result=api.prepare(self.token,[dict(id='CHECKOUT-BASIL',qty=1)],self.buyer)
+            self.assertEqual(result['summary']['delivery_fee'],0)
+        finally:
+            frappe.db.set_value('Item Price',price,'price_list_rate',3.5)
+            settings.delivery_rule=None;settings.save();frappe.db.commit()
+
+    def test_sale_notifications_once_not_on_refund(self):
+        from webshop.callus_storefront.notifications import email_template,CONDITION
+        notices=[]
+        for audience in ('customer','business'):
+            notice=frappe.get_doc(dict(doctype='Notification',name='Callus test '+audience+self.token[:8],enabled=1,channel='Email',
+                document_type='Sales Invoice',event='Submit',condition=CONDITION.replace('Website','Checkout Retail'),
+                subject='Callus '+audience+' {{ doc.name }}',message=email_template(audience),attach_print=0,
+                recipients=[{'receiver_by_document_field':'contact_email'}] if audience=='customer' else [{'cc':'team@example.com'}])).insert()
+            notices.append(notice)
+        mails=[]
+        try:
+            with patch('frappe.sendmail',side_effect=lambda **kw:mails.append(kw)):
+                self.pay();self.mark_paid();api.status(self.token);api.status(self.token)
+                sale_mails=[m for m in mails if m.get('subject','').startswith('Callus ')]
+                self.assertEqual(len(sale_mails),2)
+                customer=next(m for m in sale_mails if 'customer' in m['subject'])
+                self.assertEqual(customer['recipients'],['buyer@example.com'])
+                self.assertNotIn('Administrator',customer['recipients'])
+                self.assertIn('Logo-Transparent.png',customer['message'])
+                self.assertIn('ready to collect',customer['message'])
+                self.assertNotIn('2-3 Working Days',customer['message'])
+                doc=api._doc(self.token);api.refund(doc.name)
+                self.assertEqual(len([m for m in mails if m.get('subject','').startswith('Callus ')]),2)
+                # Keep reviewable previews from real local ERP invoice data.
+                from pathlib import Path
+                preview=Path(__file__).resolve().parents[2]/'outputs/storefront-build/sale-email-previews';preview.mkdir(exist_ok=True)
+                for m in sale_mails:
+                    audience='customer' if 'customer' in m['subject'] else 'business'
+                    (preview/(audience+'.html')).write_text('<!doctype html><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+m['message'])
+        finally:
+            for notice in notices:notice.enabled=0;notice.save()
+            frappe.db.commit()
+
     def test_webhook_signature_rejects_tampering_and_accepts_verified_event(self):
         import hmac,hashlib,time
         from werkzeug.test import EnvironBuilder

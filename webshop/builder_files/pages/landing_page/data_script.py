@@ -71,3 +71,15 @@ for product in data.catalogue:
     if data.product_code in (product["id"], product["web_id"]):
         data.metatags = {"title": product["name"] + " | Callus Garden Centre", "description": product["name"] + " at Callus Garden Centre, Siġġiewi, Malta.", "image": product["image"]}
         break
+
+# Public authentication options only; never embed session or user data in cached pages.
+data.account_options = {'signup_enabled': not bool(frappe.get_doc('Website Settings').disable_signup), 'password_login_enabled': not bool(frappe.get_doc('System Settings').disable_user_pass_login)}
+
+# Delivery terms come from the selected ERP rule, without exposing ledger details.
+data.delivery_policy = None
+checkout_settings = frappe.get_doc('Callus Checkout Settings')
+delivery_rule_name = checkout_settings.delivery_rule or 'Delivery Fee - Orders Under 35 Euros'
+if frappe.db.exists('Shipping Rule', delivery_rule_name):
+    rule = frappe.get_doc('Shipping Rule', delivery_rule_name)
+    if not rule.disabled and rule.shipping_rule_type == 'Selling':
+        data.delivery_policy = {'basis': rule.calculate_based_on, 'fixed': rule.shipping_amount, 'bands': [{'from': row.from_value, 'to': row.to_value, 'fee': row.shipping_amount} for row in rule.conditions], 'countries': [row.country for row in rule.countries]}
