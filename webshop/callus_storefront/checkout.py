@@ -329,7 +329,7 @@ def _record_payment(doc, session):
     invoice.flags.callus_verified_checkout = doc.name
     invoice.submit()
     pe = get_payment_entry("Sales Invoice", invoice.name, bank_account=doc.payment_account,
-        bank_amount=doc.amount_minor/100, ignore_permissions=True)
+        bank_amount=doc.amount_minor/100)
     if pe.paid_from_account_currency != "EUR" or pe.paid_to_account_currency != "EUR":
         fail("Payment reconciliation requires EUR accounts.")
     pe.reference_no, pe.reference_date = intent, nowdate()
@@ -367,7 +367,7 @@ def _record_refund(doc, refund_id):
         fail("The credit note total needs a staff review.")
     credit.submit()
     refund = get_payment_entry("Sales Invoice", credit.name,
-        bank_account=doc.payment_account, bank_amount=doc.amount_minor/100, ignore_permissions=True)
+        bank_account=doc.payment_account, bank_amount=doc.amount_minor/100)
     refund.reference_no, refund.reference_date = refund_id, nowdate()
     refund.insert(ignore_permissions=True)
     refund.submit()
