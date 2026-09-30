@@ -76,17 +76,37 @@
       const picks=preferred.map(name=>statement.find(p=>p.name.includes(name))).filter(Boolean);
       app.querySelector('[data-featured-grid]').innerHTML=cards([...new Map([...picks,...statement].map(p=>[p.id,p])).values()].slice(0,4));
     }
+    function categoryTree(category){
+      const hiddenRoots=new Set(['All Item Groups','Products','Plants & Trees','House Plants','Pots & Planters','Herbs & Vegetables','Bulbs & Seeds','Seeds & Bulbs','Irrigation','Garden Tools','Home Accessories & Candles','Artificial Plants','Decorations','Floristry','Occasions','Garden Accessories & Utilities','Soil & Substrate','Aggregates & Mulching']);
+      const roots=[];
+      for(const product of products.filter(p=>p.category===category)){
+        const path=(product.group_path||[product.group]).filter(name=>!hiddenRoots.has(name));
+        let level=roots;
+        for(const name of path){let node=level.find(n=>n.name===name);if(!node){node={name,count:0,children:[]};level.push(node);}node.count++;level=node.children;}
+      }
+      const sort=nodes=>{nodes.sort((a,b)=>a.name.localeCompare(b.name));nodes.forEach(n=>sort(n.children));};sort(roots);return roots;
+    }
+    function categorySidebar(activeCategory,activeGroup){
+      const contains=node=>node.name===activeGroup||node.children.some(contains);
+      const branch=(nodes,category)=>nodes.map(node=>{
+        const link=`<a href="/category/${category}?group=${encodeURIComponent(node.name)}" ${activeCategory===category&&activeGroup===node.name?'aria-current="page"':''}>${esc(node.name)}<small>${node.count}</small></a>`;
+        return node.children.length?`<details class="cg-category-branch" ${activeCategory===category&&contains(node)?'open':''}><summary>${link}<span class="cg-category-chevron" aria-hidden="true">›</span></summary><div class="cg-category-children">${branch(node.children,category)}</div></details>`:`<div class="cg-category-leaf">${link}</div>`;
+      }).join('');
+      return categories.map(c=>{const nodes=categoryTree(c.id);const link=`<a href="/category/${c.id}" ${activeCategory===c.id&&!activeGroup?'aria-current="page"':''}>${esc(c.name)}<small>${products.filter(p=>p.category===c.id).length}</small></a>`;return nodes.length?`<details class="cg-category-branch" ${activeCategory===c.id?'open':''}><summary>${link}<span class="cg-category-chevron" aria-hidden="true">›</span></summary><div class="cg-category-children">${branch(nodes,c.id)}</div></details>`:link;}).join('');
+    }
     function renderCatalogue(){
       const isCat=page==='category', isCol=page==='collection';
       const cat=isCat?categoryById[slug]:null,collection=isCol?collectionDefs[slug]:null;
       if((isCat&&!cat)||(isCol&&!collection)){main.innerHTML=`<div class="cg-wrap cg-section cg-empty"><h1>Let’s find your next favourite.</h1><p>This collection is not available.</p><a class="cg-btn" href="/store">Browse all products</a></div>`;return;}
       let q=params.get('q')||'',sort=params.get('sort')||'recommended',stockOnly=params.get('stock')==='1',under20=params.get('under20')==='1',pageNumber=Math.max(1,Number(params.get('page'))||1);
-      const title=q?`Search results for “${q}”`:cat?.name||collection?.name||'Find your next favourite';
+      const group=cat?(params.get('group')||''):'';
+      const title=q?`Search results for “${q}”`:group||cat?.name||collection?.name||'Find your next favourite';
       const desc=cat?.desc||collection?.desc||'Plants, pots and everything in between. Find a little something for your home and garden.';
-      main.innerHTML=`<div class="cg-wrap">${breadcrumb(cat?.name||collection?.name||'Shop')}${heading(title,desc)}<div class="cg-catalog-layout"><aside class="cg-filters" id="cg-filters" aria-label="Product filters"><div class="cg-filter-section"><h3>Shop by category</h3><div class="cg-filter-categories"><a href="/store" ${!cat?'aria-current="page"':''}>All products <small>${products.length}</small></a>${categories.map(c=>`<a href="/category/${c.id}" ${cat?.id===c.id?'aria-current="page"':''}>${c.name}<small>${products.filter(p=>p.category===c.id).length}</small></a>`).join('')}</div></div><div class="cg-filter-section"><h3>Find your favourite</h3><label class="cg-filter-check"><input type="checkbox" id="cg-in-stock" ${stockOnly?'checked':''}> In stock only</label><label class="cg-filter-check"><input type="checkbox" id="cg-under20" ${under20?'checked':''}> Under €20</label></div><a class="cg-link" href="/store">Clear filters</a></aside><section aria-label="Products"><div class="cg-toolbar"><button class="cg-mobile-filter" aria-expanded="false" aria-controls="cg-filters" data-filter-toggle>${icon('filter')} Filters</button><span id="cg-results-count" aria-live="polite"></span><label>Sort by <select id="cg-sort" aria-label="Sort products"><option value="recommended">Recommended</option><option value="popular">Most popular</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="newest">Newest arrivals</option><option value="name">Name: A–Z</option></select></label></div><div class="cg-products" id="cg-results"></div><nav class="cg-pagination" id="cg-pagination" aria-label="Product pages"></nav></section></div></div>`;
+      main.innerHTML=`<div class="cg-wrap">${breadcrumb(cat?.name||collection?.name||'Shop')}${heading(title,desc)}<div class="cg-catalog-layout"><aside class="cg-filters" id="cg-filters" aria-label="Product filters"><div class="cg-filter-section"><h3>Shop by category</h3><div class="cg-filter-categories"><a href="/store" ${!cat?'aria-current="page"':''}>All products <small>${products.length}</small></a>${categorySidebar(cat?.id,group)}</div></div><div class="cg-filter-section"><h3>Find your favourite</h3><label class="cg-filter-check"><input type="checkbox" id="cg-in-stock" ${stockOnly?'checked':''}> In stock only</label><label class="cg-filter-check"><input type="checkbox" id="cg-under20" ${under20?'checked':''}> Under €20</label></div><a class="cg-link" href="/store">Clear filters</a></aside><section aria-label="Products"><div class="cg-toolbar"><button class="cg-mobile-filter" aria-expanded="false" aria-controls="cg-filters" data-filter-toggle>${icon('filter')} Filters</button><span id="cg-results-count" aria-live="polite"></span><label>Sort by <select id="cg-sort" aria-label="Sort products"><option value="recommended">Recommended</option><option value="popular">Most popular</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="newest">Newest arrivals</option><option value="name">Name: A–Z</option></select></label></div><div class="cg-products" id="cg-results"></div><nav class="cg-pagination" id="cg-pagination" aria-label="Product pages"></nav></section></div></div>`;
       const sortEl=app.querySelector('#cg-sort');sortEl.value=sort;if(!sortEl.value){sort='recommended';sortEl.value=sort;}
       function update(scroll=false){
         let list=cat?products.filter(p=>p.category===cat.id):collection?collectionProducts(slug):[...products];
+        if(group)list=list.filter(p=>(p.group_path||[p.group]).includes(group));
         if(q){const terms=q.toLowerCase().trim().split(/\s+/);list=list.filter(p=>terms.every(t=>(p.name+' '+p.group+' '+p.id).toLowerCase().includes(t)));}
         if(stockOnly)list=list.filter(p=>p.available);if(under20)list=list.filter(p=>p.price>0&&p.price<20);
         list.sort((a,b)=>sort==='price-asc'?(a.price??Infinity)-(b.price??Infinity):sort==='price-desc'?(b.price??-1)-(a.price??-1):sort==='name'?a.name.localeCompare(b.name):sort==='newest'?b.created.localeCompare(a.created):sort==='popular'?a.rank-b.rank:Number(b.available)-Number(a.available)||a.rank-b.rank||a.name.localeCompare(b.name));

@@ -46,12 +46,13 @@ if settings.enabled and not (settings.login_required_to_view_products and frappe
             if not ancestor or ancestor in trail:
                 break
             trail.append(ancestor)
-        category = 'outdoor'
-        if 'House Plants' in trail:
+        # Unmatched groups remain in All products; never assume they are plants.
+        category = 'other'
+        if 'House Plants' in trail or 'Indoor Bonsai' in trail or 'Indoor Bonsai Sale' in trail:
             category = 'indoor'
         elif 'Pots & Planters' in trail:
             category = 'pots'
-        elif 'Herbs & Vegetables' in trail or 'Seeds & Bulbs' in trail or 'Seeds' in trail:
+        elif 'Herbs & Vegetables' in trail or 'Bulbs & Seeds' in trail or 'Seeds & Bulbs' in trail or 'Seeds' in trail:
             category = 'grow'
         elif 'Irrigation' in trail or 'Garden Tools' in trail:
             category = 'tools'
@@ -61,11 +62,13 @@ if settings.enabled and not (settings.login_required_to_view_products and frappe
             category = 'flowers'
         elif 'Garden Accessories & Utilities' in trail or 'Soil & Substrate' in trail or 'Aggregates & Mulching' in trail:
             category = 'care'
+        elif 'Plants & Trees' in trail:
+            category = 'outdoor'
         price = prices.get(item.item_code)
         quantity = stock.get(item.item_code + '|' + (item.website_warehouse or ''), 0)
         non_stock = not active[item.item_code].is_stock_item
         visible_price = bool(settings.show_price and not (frappe.session.user == 'Guest' and settings.hide_price_for_guest))
-        data.catalogue.append({'id': item.item_code, 'web_id': item.name, 'name': item.web_item_name, 'group': item.item_group, 'category': category, 'image': item.website_image or '', 'description': (item.web_long_description or item.short_description or item.description or '') if data.product_code in (item.item_code, item.name) else '', 'price': price.price_list_rate if price and visible_price else None, 'currency': price.currency if price else 'EUR', 'available': quantity > 0, 'quantity': quantity, 'on_request': non_stock, 'rank': ranks.get(item.item_code, 999999), 'created': str(item.creation)[:10], 'uom': active[item.item_code].stock_uom})
+        data.catalogue.append({'id': item.item_code, 'web_id': item.name, 'name': item.web_item_name, 'group': item.item_group, 'group_path': list(reversed(trail)), 'category': category, 'image': item.website_image or '', 'description': (item.web_long_description or item.short_description or item.description or '') if data.product_code in (item.item_code, item.name) else '', 'price': price.price_list_rate if price and visible_price else None, 'currency': price.currency if price else 'EUR', 'available': quantity > 0, 'quantity': quantity, 'on_request': non_stock, 'rank': ranks.get(item.item_code, 999999), 'created': str(item.creation)[:10], 'uom': active[item.item_code].stock_uom})
 
 for product in data.catalogue:
     if data.product_code in (product["id"], product["web_id"]):

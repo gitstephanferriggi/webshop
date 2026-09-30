@@ -11,14 +11,14 @@ class Row(dict):
     __getattr__=dict.get
     __setattr__=dict.__setitem__
 
-def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=False,product_code='A',login_required=False):
+def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=False,product_code='A',login_required=False,item_group='Herbs',groups=None):
     today=datetime.date(2026,9,29)
     rows={
-        'Website Item':[Row(name='W-A',item_code='A',web_item_name='Basil',item_group='Herbs',website_warehouse='Shop',website_image='/files/basil.jpg',description='Basil details',creation='2026-01-01')],
+        'Website Item':[Row(name='W-A',item_code='A',web_item_name='Basil',item_group=item_group,website_warehouse='Shop',website_image='/files/basil.jpg',description='Basil details',creation='2026-01-01')],
         'Item':items if items is not None else [Row(name='A',is_stock_item=1,stock_uom='Pcs')],
         'Item Price':prices if prices is not None else [Row(item_code='A',price_list_rate=3.5,currency='EUR',valid_from=None,valid_upto=None,uom='Pcs')],
         'Bin':stock if stock is not None else [Row(item_code='A',warehouse='Shop',actual_qty=10,reserved_qty=3)],
-        'Item Group':[Row(name='Herbs',parent_item_group='Herbs & Vegetables')],
+        'Item Group':groups if groups is not None else [Row(name='Herbs',parent_item_group='Herbs & Vegetables')],
         'Sales Invoice':[Row(item_code='A',units=4)]}
     calls=[]
     def get_all(dt,**kw):
@@ -37,6 +37,20 @@ class CatalogueTests(unittest.TestCase):
         data,_=run_catalogue(stock=[Row(item_code='A',warehouse='Shop',actual_qty=4,reserved_qty=2),Row(item_code='A',warehouse='Other',actual_qty=999,reserved_qty=0)])
         self.assertEqual(data.catalogue[0]['quantity'],2)
         self.assertEqual(data.catalogue[0]['category'],'grow')
+    def test_category_mapping_uses_specific_branches_before_outdoor(self):
+        parents={'Indoor Bonsai':'Bonsai','Indoor Bonsai Sale':'Bonsai','Bonsai':'Plants & Trees',
+                 'Winter Bulbs':'Bulbs','Bulbs':'Bulbs & Seeds','Trays':'Germination & Propogation',
+                 'Germination & Propogation':'Bulbs & Seeds','Others':'Trees','Trees':'Plants & Trees',
+                 'Shrubs':'Garden Plants','Garden Plants':'Plants & Trees','New indoor subgroup':'Indoor Bonsai',
+                 'Unmapped accessories':'Products'}
+        groups=[Row(name=name,parent_item_group=parent) for name,parent in parents.items()]
+        for group,expected in [('Indoor Bonsai','indoor'),('Indoor Bonsai Sale','indoor'),
+                               ('New indoor subgroup','indoor'),('Winter Bulbs','grow'),('Trays','grow'),
+                               ('Others','outdoor'),('Shrubs','outdoor'),('Unmapped accessories','other')]:
+            with self.subTest(group=group):
+                data,_=run_catalogue(item_group=group,groups=groups)
+                self.assertEqual(data.catalogue[0]['category'],expected)
+
     def test_disabled_items_excluded(self):
         self.assertEqual(run_catalogue(items=[])[0].catalogue,[])
     def test_private_future_expired_and_wrong_uom_prices_ignored(self):
