@@ -4,7 +4,7 @@
  "name": "callus-login",
  "page_name": "callus-login",
  "page_title": "Sign in",
- "route": "login",
+ "route": "customer-login",
  "published": 1,
  "is_standard": 1,
  "app": "webshop",

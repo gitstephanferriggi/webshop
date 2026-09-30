@@ -1,6 +1,6 @@
 # Callus customer account screens
 
-The shop now provides its own Builder pages at `/login`, `/signup`, `/forgot-password` and `/update-password`, plus `/account-callus`. These pages use the existing storefront colours, official logo, responsive layout and accessible labelled fields. The standard customer login and password forms are replaced; Frappe still handles credentials and sessions.
+The shop now provides its own Builder pages at `/customer-login`, `/signup`, `/forgot-password` and `/update-password`, plus `/account-callus`. These pages use the existing storefront colours, official logo, responsive layout and accessible labelled fields. The native `/login` route is retained for employees and their time-clock access. Customer links use `/customer-login`; successful login respects the same-origin destination returned by Frappe. Frappe still handles credentials and sessions.
 
 Registration collects first name, last name and email. Native `frappe.core.doctype.user.user.sign_up` creates a Website User with the configured Portal Settings default role. The welcome email's original `/update-password?key=...` link now opens the matching shop page. A password is chosen only after following the email link. Frappe enforces password strength, reset-token expiry and single use. The API returns an explicit team-help state when welcome mail could not be generated.
 
