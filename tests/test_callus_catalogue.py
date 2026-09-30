@@ -29,7 +29,9 @@ def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=
         return rows[dt]
     utils=SimpleNamespace(getdate=lambda v=None:datetime.date.fromisoformat(str(v)) if v else today,add_days=lambda d,n:d+datetime.timedelta(days=n))
     frappe=SimpleNamespace(db=SimpleNamespace(exists=lambda *args:False),get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
-    data=Row();exec(SCRIPT,{'frappe':frappe,'data':data})
+    # Keep the fixture restricted to the builtins used by Builder's data script.
+    allowed_builtins={name:getattr(__import__('builtins'),name) for name in ('bool','list','str','enumerate','max','range')}
+    data=Row();exec(SCRIPT,{'frappe':frappe,'data':data,'__builtins__':allowed_builtins})
     return data,calls
 
 class CatalogueTests(unittest.TestCase):
