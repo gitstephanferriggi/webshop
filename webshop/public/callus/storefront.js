@@ -131,6 +131,27 @@
       return result.message;
     }
     function newCheckoutToken(){return [...crypto.getRandomValues(new Uint8Array(32))].map(x=>x.toString(16).padStart(2,'0')).join('');}
+    function clearPurchasedBasket(order,token){
+      if(!token||!['Paid','Refund Pending','Refunded'].includes(order.status))return false;
+      const key='callus-cleared-checkouts-v1';
+      const stored=getSaved(key,[]);const cleared=Array.isArray(stored)?stored:[];
+      let legacy=false;try{legacy=sessionStorage.getItem('callus-cleared-checkout')===token;}catch(_){}
+      if(cleared.includes(token)||legacy)return false;
+      // Read the current basket: another tab may have added items during payment.
+      const current=getSaved('callus-basket-v1',basket);
+      basket=Array.isArray(current)?current:basket;
+      for(const purchased of order.summary.items){const row=basket.find(x=>x.id===purchased.id);if(row)row.qty=Math.max(0,row.qty-purchased.qty);}
+      basket=basket.filter(x=>x.qty>0);
+      persist('callus-basket-v1',basket);persist(key,[...cleared,token]);counts();
+      try{sessionStorage.setItem('callus-cleared-checkout',token);}catch(_){}
+      return true;
+    }
+    async function reconcileBasket(){
+      let token;try{token=sessionStorage.getItem('callus-active-checkout');}catch(_){}
+      if(!token)return;
+      try{clearPurchasedBasket(await checkoutApi('status',{token}),token);basket=getSaved('callus-basket-v1',basket);counts();if(page==='basket')renderBasket();}
+      catch(_){/* Keep the basket until payment is verified; checkout offers retry. */}
+    }
     async function renderCheckout(){
       const sessionKey='callus-active-checkout';
       let token;try{token=sessionStorage.getItem(sessionKey);}catch(_){}
@@ -141,10 +162,7 @@
         const title=order.status==='Paid'?'Thank you. Your payment is confirmed.':order.status==='Refunded'?'Your refund is confirmed.':order.status==='Refund Pending'?'Your refund is being processed.':order.status==='Expired'?'This checkout has ended.':'Your order is ready for payment.';
         main.innerHTML=`<div class="cg-wrap cg-section">${breadcrumb('Checkout')}${heading(title)}<p>Order reference: <strong>${esc(order.order)}</strong></p>${!order.is_live?errorBox('Stripe test mode — no real money is taken.'):''}<div class="cg-basket-layout"><div><div id="cg-payment-message" aria-live="polite"></div>${paid?'<p class="cg-note">Keep your order reference for any questions. Call +356 9999 5135 for help.</p>':''}${['Draft','Pending'].includes(order.status)?'<button class="cg-btn" id="cg-pay">Continue to secure payment</button><button class="cg-link" id="cg-cancel-order" style="display:block;margin-top:24px">Cancel checkout & return to basket</button>':'<button class="cg-btn" id="cg-new-order">Continue shopping</button>'}<p class="cg-note" style="margin-top:20px">Card details are entered securely on Stripe. Confirmation here is based on the payment provider’s verified status.</p><button class="cg-link" id="cg-refresh-payment">Refresh payment status</button></div>${quoteHtml(order.summary)}</div></div>`;
         window.scrollTo({top:0,behavior:"instant"});
-        if(paid){
-          let cleared=false;try{cleared=sessionStorage.getItem('callus-cleared-checkout')===token;}catch(_){}
-          if(!cleared){for(const purchased of order.summary.items){const row=basket.find(x=>x.id===purchased.id);if(row)row.qty=Math.max(0,row.qty-purchased.qty);}basket=basket.filter(x=>x.qty>0);persist('callus-basket-v1',basket);counts();try{sessionStorage.setItem('callus-cleared-checkout',token);}catch(_){}}
-        }
+        if(paid)clearPurchasedBasket(order,token);
         const action=async(button,fn)=>{button.disabled=true;try{await fn();}catch(e){app.querySelector('#cg-payment-message').innerHTML=errorBox(e.message);button.disabled=false;}};
         app.querySelector('#cg-new-order')?.addEventListener('click',()=>{sessionStorage.removeItem(sessionKey);location.assign('/store');});
         app.querySelector('#cg-pay')?.addEventListener('click',e=>action(e.currentTarget,async()=>{
@@ -193,6 +211,9 @@
     app.querySelectorAll('.cg-search').forEach(form=>form.addEventListener('submit',e=>{const input=form.querySelector('input');input.value=input.value.trim();if(!input.value){e.preventDefault();location.href='/store';}}));
     const renderers={home:renderHome,store:renderCatalogue,category:renderCatalogue,collection:renderCatalogue,product:renderProduct,basket:renderBasket,checkout:renderCheckout,saved:renderSaved,categories:renderCategories,collections:renderCollections};
     if(renderers[page])renderers[page]();counts();
+    if(page!=='checkout')reconcileBasket();
+    window.addEventListener('pageshow',event=>{if(event.persisted){if(page==='checkout')renderCheckout();else reconcileBasket();}});
+    window.addEventListener('storage',event=>{if(event.key==='callus-basket-v1'){basket=getSaved('callus-basket-v1',[]);counts();if(page==='basket')renderBasket();}});
     app.addEventListener('error',e=>{const img=e.target;if(img.tagName!=='IMG'||img.hidden)return;img.hidden=true;const label=document.createElement('span');label.className='cg-image-fallback';label.textContent='Photograph coming soon';img.parentElement.append(label);},true);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
