@@ -1,0 +1,71 @@
+[
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - Item Fields",
+    "script_type": "DocType Event",
+    "reference_doctype": "Item",
+    "doctype_event": "Before Validate",
+    "disabled": 0,
+    "script": "# Restricted marketing edits; applies at the server, including REST saves.\nif frappe.session.user == 'marketing@callusgardencentre.com':\n    if doc.is_new():\n        frappe.throw('Use the Publish to Website action; creation is not permitted here.')\n    old = frappe.get_doc(doc.doctype, doc.name)\n    allowed = ['image', 'description', 'item_group']\n    for field in frappe.get_meta(doc.doctype).fields:\n        key = field.fieldname\n        if not key or field.fieldtype in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Fold', 'Heading']:\n            continue\n        if key in allowed:\n            continue\n        before = old.get(key)\n        after = doc.get(key)\n        if field.fieldtype in ['Table', 'Table MultiSelect']:\n            before = [{k: v for k, v in row.as_dict().items() if k not in ['modified', 'modified_by']} for row in (before or [])]\n            after = [{k: v for k, v in row.as_dict().items() if k not in ['modified', 'modified_by']} for row in (after or [])]\n        if before != after and not (before in [None, ''] and after in [None, '']):\n            frappe.throw('Marketing access cannot change: ' + (field.label or key))\n    if doc.doctype == 'Item' and doc.item_group != old.item_group:\n        if not frappe.db.exists('Item Group', doc.item_group):\n            frappe.throw('Select an existing item category.')\n"
+  },
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - Item Rename",
+    "script_type": "DocType Event",
+    "reference_doctype": "Item",
+    "doctype_event": "Before Rename",
+    "disabled": 0,
+    "script": "if frappe.session.user == 'marketing@callusgardencentre.com':\n    frappe.throw('Marketing access cannot rename products.')\n"
+  },
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - Website Item Fields",
+    "script_type": "DocType Event",
+    "reference_doctype": "Website Item",
+    "doctype_event": "Before Validate",
+    "disabled": 0,
+    "script": "if frappe.session.user == 'marketing@callusgardencentre.com':\n    if doc.is_new():\n        item = frappe.get_doc('Item', doc.item_code)\n        item.check_permission('read')\n        if item.disabled:\n            frappe.throw('Disabled products require administrator review.')\n        # Rebuild all protected values from the real Item and schema defaults.\n        # Incoming item/display names, stock fields, route and settings are ignored.\n        marketing = {}\n        for key in ['website_image', 'short_description', 'web_long_description']:\n            marketing[key] = doc.get(key)\n        for field in frappe.get_meta('Website Item').fields:\n            if field.fieldtype in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Fold', 'Heading']:\n                continue\n            if field.fieldtype in ['Table', 'Table MultiSelect']:\n                doc.set(field.fieldname, [])\n            else:\n                doc.set(field.fieldname, field.default if field.default not in [None, ''] else None)\n        for key in ['item_code', 'item_name', 'item_group', 'stock_uom', 'brand', 'has_variants', 'variant_of', 'description']:\n            doc.set(key, item.get(key))\n        doc.web_item_name = item.item_name\n        doc.website_warehouse = 'Garden Center - BGL'\n        doc.published = 1\n        doc.website_image = marketing.get('website_image') or item.image\n        doc.short_description = marketing.get('short_description')\n        doc.web_long_description = marketing.get('web_long_description')\n    if not doc.is_new():\n        old = frappe.get_doc(doc.doctype, doc.name)\n        allowed = ['website_image', 'short_description', 'web_long_description']\n        if doc.published == 1 and not old.published:\n            allowed.append('published')\n        for field in frappe.get_meta(doc.doctype).fields:\n            key = field.fieldname\n            if not key or field.fieldtype in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Fold', 'Heading']:\n                continue\n            if key in allowed:\n                continue\n            if key in ['item_group', 'description'] and doc.get(key) == frappe.db.get_value('Item', doc.item_code, key):\n                continue\n            before = old.get(key)\n            after = doc.get(key)\n            if field.fieldtype in ['Table', 'Table MultiSelect']:\n                before = [{k: v for k, v in row.as_dict().items() if k not in ['modified', 'modified_by']} for row in (before or [])]\n                after = [{k: v for k, v in row.as_dict().items() if k not in ['modified', 'modified_by']} for row in (after or [])]\n            if before != after and not (before in [None, ''] and after in [None, '']):\n                frappe.throw('Marketing access cannot change: ' + (field.label or key))\n        if doc.doctype == 'Item' and doc.item_group != old.item_group:\n            if not frappe.db.exists('Item Group', doc.item_group):\n                frappe.throw('Select an existing item category.')\n"
+  },
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - Website Item Rename",
+    "script_type": "DocType Event",
+    "reference_doctype": "Website Item",
+    "doctype_event": "Before Rename",
+    "disabled": 0,
+    "script": "if frappe.session.user == 'marketing@callusgardencentre.com':\n    frappe.throw('Marketing access cannot rename products.')\n"
+  },
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - Website Order Filter",
+    "script_type": "Permission Query",
+    "reference_doctype": "Sales Order",
+    "disabled": 0,
+    "script": "if user == 'marketing@callusgardencentre.com':\n    conditions = \"EXISTS (SELECT 1 FROM `tabCallus Checkout` cc WHERE cc.sales_order = `tabSales Order`.name)\"\n"
+  },
+  {
+    "doctype": "Server Script",
+    "name": "Callus Marketing - New Website Order Access",
+    "script_type": "DocType Event",
+    "reference_doctype": "Callus Checkout",
+    "doctype_event": "After Save",
+    "disabled": 0,
+    "script": "# Grant read access only after the trusted checkout links its Sales Order.\nif doc.sales_order and frappe.db.exists('User', 'marketing@callusgardencentre.com'):\n    filters = {'user': 'marketing@callusgardencentre.com', 'allow': 'Sales Order', 'for_value': doc.sales_order, 'apply_to_all_doctypes': 0, 'applicable_for': 'Sales Order'}\n    if not frappe.db.exists('User Permission', filters):\n        grant = frappe.get_doc(dict(filters, doctype='User Permission'))\n        grant.insert(ignore_permissions=True)\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Callus Marketing - Item Form",
+    "dt": "Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Item\", {\n refresh(frm) {\n  if (frappe.session.user !== \"marketing@callusgardencentre.com\") return;\n  const allowed = [\"image\", \"description\", \"item_group\"];\n  for (const field of frm.meta.fields) {\n   if (!['Section Break','Column Break','Tab Break','HTML','Button'].includes(field.fieldtype))\n    frm.set_df_property(field.fieldname, 'read_only', allowed.includes(field.fieldname) ? 0 : 1);\n  }\n  frm.clear_custom_buttons();\n  frm.add_custom_button('Publish to Website', async () => {\n   if (frm.is_dirty()) { frappe.msgprint('Please save your changes first.'); return; }\n   const result = await frappe.db.get_value('Website Item', {item_code: frm.doc.item_code}, 'name');\n   let name = result.message && result.message.name;\n   if (name) {\n    await frappe.db.set_value('Website Item', name, 'published', 1);\n   } else {\n    const item = frm.doctype === 'Item' ? frm.doc : (await frappe.db.get_doc('Item', frm.doc.item_code));\n    const result = await frappe.call({method:'webshop.webshop.doctype.website_item.website_item.make_website_item', args:{doc:JSON.stringify(item)},freeze:true});\n    name = result.message && result.message[0];\n   }\n   if(name) frappe.set_route('Form','Website Item',name);\n  });\n }\n});\n"
+  },
+  {
+    "doctype": "Client Script",
+    "name": "Callus Marketing - Website Item Form",
+    "dt": "Website Item",
+    "view": "Form",
+    "enabled": 1,
+    "script": "frappe.ui.form.on(\"Website Item\", {\n refresh(frm) {\n  if (frappe.session.user !== \"marketing@callusgardencentre.com\") return;\n  const allowed = [\"website_image\", \"short_description\", \"web_long_description\"];\n  for (const field of frm.meta.fields) {\n   if (!['Section Break','Column Break','Tab Break','HTML','Button'].includes(field.fieldtype))\n    frm.set_df_property(field.fieldname, 'read_only', allowed.includes(field.fieldname) ? 0 : 1);\n  }\n  frm.clear_custom_buttons();\n  frm.add_custom_button('Publish to Website', async () => {\n   if (frm.is_dirty()) { frappe.msgprint('Please save your changes first.'); return; }\n   const result = await frappe.db.get_value('Website Item', {item_code: frm.doc.item_code}, 'name');\n   let name = result.message && result.message.name;\n   if (name) {\n    await frappe.db.set_value('Website Item', name, 'published', 1);\n   } else {\n    const item = frm.doctype === 'Item' ? frm.doc : (await frappe.db.get_doc('Item', frm.doc.item_code));\n    const result = await frappe.call({method:'webshop.webshop.doctype.website_item.website_item.make_website_item', args:{doc:JSON.stringify(item)},freeze:true});\n    name = result.message && result.message[0];\n   }\n   if(name) frappe.set_route('Form','Website Item',name);\n  });\n }\n});\n"
+  }
+]

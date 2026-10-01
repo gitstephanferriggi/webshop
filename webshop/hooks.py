@@ -97,3 +97,8 @@ fixtures = [
 
 # Retries missed Stripe callbacks without depending on the customer return page.
 scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending"]}}
+
+# Marcella's account must not inherit unrelated access from All / Guest.
+# Hooks return None for every other user and never grant permissions.
+has_permission = {'*': 'webshop.callus_storefront.marketing_access.has_permission'}
+permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.permission_query'}
