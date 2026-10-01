@@ -3,9 +3,14 @@
 Account: marketing@callusgardencentre.com (Marcella).
 
 The `Callus Marketing Editor` role permits existing Item reads/edits, Website Item
-reads/edits/publication, Sales Order reads and Item Group/Warehouse selection.
-Warehouse selection supports product-form name lookups; warehouse document reads
-and edits remain unavailable. Form Tour help metadata is readable through native
+reads/edits/publication, Sales Order reads and Item Group selection.
+Warehouse requires read/select for native form lookups. Add a User Permission for
+each of `Garden Center - BGL`, its parent `All Warehouses - BGL`, and its
+linked transit warehouse `Goods In Transit - BGL`,
+applicable only to Warehouse, with
+`apply_to_all_doctypes=0` and `hide_descendants=1`. This scopes read access to those three reference records;
+other warehouses, warehouse edits and stock transactions remain unavailable.
+The parent and transit permissions are needed for ERPNext to resolve the linked warehouse. Form Tour help metadata is readable through native
 permissions. Check fields are compared as integers, including form-encoded values. No standard
 Item Manager, Website Manager or Sales User role should be assigned.
 
