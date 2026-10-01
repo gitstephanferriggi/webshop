@@ -54,6 +54,10 @@ class Tests(unittest.TestCase):
  def test_self_user_read_only(self):
   self.assertIsNone(module.has_permission(Doc(doctype='User',name=module.MARKETING_USER),'read',module.MARKETING_USER))
   self.assertIs(self.check('User'),False)
+ def test_help_tour_read_only(self):
+  self.assertIsNone(self.check('Form Tour'))
+  self.assertIsNone(module.permission_query(module.MARKETING_USER,'Form Tour'))
+  self.assertIs(self.check('Form Tour','write'),False)
  def test_references_read_only(self):
   for dt in module.REFERENCE_TYPES:
    self.assertIsNone(self.check(dt));self.assertIs(self.check(dt,'write'),False)

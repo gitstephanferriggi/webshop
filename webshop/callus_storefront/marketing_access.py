@@ -8,7 +8,7 @@ import frappe
 MARKETING_USER = 'marketing@callusgardencentre.com'
 PRODUCTS = {'Item', 'Website Item'}
 READ_ACTIONS = {'read', 'select'}
-REFERENCE_TYPES = {'Item Group', 'UOM', 'Country', 'Language'}
+REFERENCE_TYPES = {'Item Group', 'UOM', 'Country', 'Language', 'Warehouse'}
 WEBSITE_ORDERS = (
     'EXISTS (SELECT 1 FROM `tabCallus Checkout` cc '
     'WHERE cc.sales_order = `tabSales Order`.name)'
@@ -36,7 +36,7 @@ def permission_query(user=None, doctype=None):
             " AND COALESCE(`tabFile`.attached_to_doctype, '') = ''))"
         )
     # Framework metadata is not business data; native role permissions still apply.
-    if doctype in {'DocType', 'DocField', 'Workspace', 'Module Def'}:
+    if doctype in {'DocType', 'DocField', 'Workspace', 'Module Def', 'Form Tour'}:
         return None
     return '1=0'
 
@@ -55,7 +55,7 @@ def has_permission(doc, ptype, user=None, **kwargs):
         if ptype not in READ_ACTIONS:
             return False
         return None if frappe.db.exists('Callus Checkout', {'sales_order': doc.name}) else False
-    if dt in REFERENCE_TYPES | {'DocType', 'DocField', 'Workspace', 'Module Def'}:
+    if dt in REFERENCE_TYPES | {'DocType', 'DocField', 'Workspace', 'Module Def', 'Form Tour'}:
         return None if ptype in READ_ACTIONS else False
     if dt == 'User':
         return None if doc.name == MARKETING_USER and ptype in READ_ACTIONS else False

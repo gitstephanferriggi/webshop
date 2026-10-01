@@ -3,7 +3,10 @@
 Account: marketing@callusgardencentre.com (Marcella).
 
 The `Callus Marketing Editor` role permits existing Item reads/edits, Website Item
-reads/edits/publication, Sales Order reads and Item Group selection. No standard
+reads/edits/publication, Sales Order reads and Item Group/Warehouse selection.
+Warehouse selection supports product-form name lookups; warehouse document reads
+and edits remain unavailable. Form Tour help metadata is readable through native
+permissions. Check fields are compared as integers, including form-encoded values. No standard
 Item Manager, Website Manager or Sales User role should be assigned.
 
 `marketing_site_rules.json` is the reproducible site configuration: server-side
