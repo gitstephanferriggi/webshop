@@ -1,0 +1,59 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Bolt Settings",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "field_order": [
+  "enabled",
+  "environment",
+  "site_hostname",
+  "provider_id",
+  "mode"
+ ],
+ "fields": [
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0"
+  },
+  {
+   "fieldname": "environment",
+   "fieldtype": "Select",
+   "label": "Environment",
+   "options": "Staging\nProduction"
+  },
+  {
+   "fieldname": "site_hostname",
+   "fieldtype": "Data",
+   "label": "Site Hostname",
+   "description": "Exact host for this site. Prevents a copied database accepting events on another site."
+  },
+  {
+   "fieldname": "provider_id",
+   "fieldtype": "Data",
+   "label": "Provider Id",
+   "description": "Bolt store ID. Until supplied, events are captured as unverified; no sales or stock processing occurs."
+  },
+  {
+   "fieldname": "mode",
+   "fieldtype": "Read Only",
+   "label": "Mode",
+   "default": "Capture only",
+   "description": "This release only stores events. It does not accept orders, create sales, send emails or change stock."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "report": 0
+  }
+ ],
+ "track_changes": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

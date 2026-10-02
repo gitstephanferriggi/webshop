@@ -1,0 +1,100 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Bolt Event",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "issingle": 0,
+ "field_order": [
+  "event_type",
+  "status",
+  "environment",
+  "is_test",
+  "provider_id",
+  "provider_verified",
+  "bolt_order_id",
+  "order_reference",
+  "receipt_key",
+  "payload_hash",
+  "payload"
+ ],
+ "fields": [
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "label": "Event Type",
+   "options": "new_order\ncancel_order\norder_update\nprovider_status\ncourier_details",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Captured",
+   "default": "Captured",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "environment",
+   "fieldtype": "Data",
+   "label": "Environment"
+  },
+  {
+   "fieldname": "provider_id",
+   "fieldtype": "Data",
+   "label": "Provider Id",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "provider_verified",
+   "fieldtype": "Check",
+   "label": "Provider Verified"
+  },
+  {
+   "fieldname": "bolt_order_id",
+   "fieldtype": "Data",
+   "label": "Bolt Order Id",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "order_reference",
+   "fieldtype": "Data",
+   "label": "Order Reference"
+  },
+  {
+   "fieldname": "receipt_key",
+   "fieldtype": "Data",
+   "label": "Receipt Key",
+   "hidden": 1
+  },
+  {
+   "fieldname": "payload_hash",
+   "fieldtype": "Data",
+   "label": "Payload Hash"
+  },
+  {
+   "fieldname": "payload",
+   "fieldtype": "Code",
+   "label": "Payload",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "is_test",
+   "fieldtype": "Check",
+   "label": "Verification Fixture",
+   "description": "Synthetic verification receipt. Must never create a sale."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "report": 1
+  }
+ ],
+ "track_changes": 0,
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

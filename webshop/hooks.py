@@ -102,3 +102,6 @@ scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout
 # Hooks return None for every other user and never grant permissions.
 has_permission = {'*': 'webshop.callus_storefront.marketing_access.has_permission'}
 permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.permission_query'}
+
+# A dedicated Bolt API identity can receive events but cannot access ERP documents.
+auth_hooks = ['webshop.bolt_integration.webhooks.restrict_service_user']
