@@ -1,0 +1,77 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Bolt Order",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "autoname": "prompt",
+ "field_order": [
+  "provider_id",
+  "bolt_order_id",
+  "environment",
+  "status",
+  "sales_order",
+  "sales_invoice",
+  "source_amount",
+  "last_bolt_status",
+  "source_hash"
+ ],
+ "fields": [
+  {
+   "fieldname": "provider_id",
+   "label": "Provider",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "bolt_order_id",
+   "label": "Bolt Order",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "environment",
+   "label": "Environment",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Received\nDraft Sale\nRecorded\nCancelled"
+  },
+  {
+   "fieldname": "sales_order",
+   "label": "Sales Order",
+   "fieldtype": "Link",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "label": "Sales Invoice",
+   "fieldtype": "Link",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "source_amount",
+   "label": "Bolt total",
+   "fieldtype": "Currency"
+  },
+  {
+   "fieldname": "last_bolt_status",
+   "label": "Last Bolt status",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "source_hash",
+   "fieldtype": "Data",
+   "label": "Source basket hash",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "track_changes": 1
+}

@@ -96,7 +96,7 @@ fixtures = [
 ]
 
 # Retries missed Stripe callbacks without depending on the customer return page.
-scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending"]}}
+scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending", "webshop.bolt_integration.processing.process_pending", "webshop.bolt_integration.sync.tick"]}}
 
 # Marcella's account must not inherit unrelated access from All / Guest.
 # Hooks return None for every other user and never grant permissions.
@@ -105,3 +105,6 @@ permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.
 
 # A dedicated Bolt API identity can receive events but cannot access ERP documents.
 auth_hooks = ['webshop.bolt_integration.webhooks.restrict_service_user']
+
+# Keep the independent Bolt product selection field reproducible on site migration.
+after_migrate = "webshop.bolt_integration.setup.ensure_product_flag"

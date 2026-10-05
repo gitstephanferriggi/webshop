@@ -9,7 +9,24 @@
   "environment",
   "site_hostname",
   "provider_id",
-  "mode"
+  "mode",
+  "process_orders",
+  "submit_sales",
+  "company",
+  "customer",
+  "price_list",
+  "taxes_and_charges",
+  "sync_catalogue",
+  "integrator_id",
+  "region_id",
+  "secret_key",
+  "vat_tag",
+  "sync_phase",
+  "sync_snapshot",
+  "last_synced_skus",
+  "last_sync",
+  "sync_error",
+  "last_catalogue_hash"
  ],
  "fields": [
   {
@@ -41,7 +58,107 @@
    "fieldtype": "Read Only",
    "label": "Mode",
    "default": "Capture only",
-   "description": "This release only stores events. It does not accept orders, create sales, send emails or change stock."
+   "description": "Webhook receipt is durable. Sales processing and catalogue synchronisation are separate opt-in settings."
+  },
+  {
+   "fieldname": "process_orders",
+   "label": "Process incoming orders",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "submit_sales",
+   "label": "Submit Sales Orders and Invoices",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "company",
+   "label": "Company",
+   "fieldtype": "Link",
+   "options": "Company"
+  },
+  {
+   "fieldname": "customer",
+   "label": "Bolt sales customer",
+   "fieldtype": "Link",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "price_list",
+   "label": "Selling price list",
+   "fieldtype": "Link",
+   "options": "Price List"
+  },
+  {
+   "fieldname": "taxes_and_charges",
+   "label": "Inclusive sales tax template",
+   "fieldtype": "Link",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "sync_catalogue",
+   "label": "Synchronise catalogue",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "integrator_id",
+   "label": "Integrator ID",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "region_id",
+   "label": "Region ID",
+   "fieldtype": "Int"
+  },
+  {
+   "fieldname": "secret_key",
+   "label": "Bolt signing secret",
+   "fieldtype": "Password"
+  },
+  {
+   "fieldname": "vat_tag",
+   "label": "Default Bolt VAT tag",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "sync_phase",
+   "label": "Sync phase",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_snapshot",
+   "label": "Pending catalogue snapshot",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_synced_skus",
+   "label": "Previously synchronised SKUs",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync",
+   "label": "Last completed sync",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_error",
+   "label": "Sync error",
+   "fieldtype": "Small Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_catalogue_hash",
+   "fieldtype": "Data",
+   "label": "Last catalogue hash",
+   "read_only": 1
   }
  ],
  "permissions": [

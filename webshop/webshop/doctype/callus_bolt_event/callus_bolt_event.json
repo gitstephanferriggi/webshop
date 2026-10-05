@@ -15,7 +15,9 @@
   "order_reference",
   "receipt_key",
   "payload_hash",
-  "payload"
+  "payload",
+  "sales_order",
+  "processing_error"
  ],
  "fields": [
   {
@@ -29,7 +31,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Captured",
+   "options": "Captured\nProcessed\nReview\nRetry\nIgnored",
    "default": "Captured",
    "in_list_view": 1
   },
@@ -83,6 +85,17 @@
    "fieldtype": "Check",
    "label": "Verification Fixture",
    "description": "Synthetic verification receipt. Must never create a sale."
+  },
+  {
+   "fieldname": "sales_order",
+   "label": "Sales Order",
+   "fieldtype": "Link",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "processing_error",
+   "label": "Processing error",
+   "fieldtype": "Small Text"
   }
  ],
  "permissions": [

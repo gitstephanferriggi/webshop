@@ -50,7 +50,7 @@ def health():
     _authorize()
     settings = _settings()
     return {'ok': True, 'release': RELEASE, 'enabled': bool(settings.enabled),
-            'environment': settings.environment, 'mode': 'capture_only',
+            'environment': settings.environment, 'mode': 'sales_processing' if getattr(settings, 'process_orders', False) else 'capture_only',
             'provider_configured': bool((settings.provider_id or '').strip())}
 
 
