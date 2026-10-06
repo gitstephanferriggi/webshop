@@ -136,7 +136,7 @@ def cancel_sale(link):
             so.cancel()
         # Retain a draft with an explicit cancellation marker for the audit trail.
         elif so.docstatus==0:
-            so.db_set('remarks',(so.remarks or '')+'\nCancelled by Bolt; do not fulfil.')
+            so.add_comment('Comment', 'Cancelled by Bolt; do not fulfil.')
     link.status='Cancelled'
 
 
