@@ -30,3 +30,10 @@
 .cg-category-children a small{flex-shrink:0}
 .cg-category-branch>summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .cg-category-children .cg-category-leaf>a{min-height:36px;align-items:center;padding:5px 0}
+
+/* Curated product gallery */
+.cg-gallery{min-width:0}.cg-gallery-thumbs{display:flex;gap:12px;overflow-x:auto;padding:14px 2px}
+.cg-gallery-thumbs button{flex:0 0 76px;height:82px;border:2px solid transparent;border-radius:6px;background:var(--surface,#f2f2eb);padding:4px;cursor:pointer}
+.cg-gallery-thumbs button[aria-pressed="true"]{border-color:var(--green,#244c3a)}
+.cg-gallery-thumbs button:focus-visible{outline:2px solid #244c3a;outline-offset:3px}
+.cg-gallery-thumbs img{width:100%;height:100%;object-fit:contain}

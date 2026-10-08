@@ -1,6 +1,6 @@
 {
-  "release": "callus-sale-emails-candidate-1",
-  "modified": "2026-09-30 01:00:00.000000",
+  "release": "callus-product-gallery-candidate-1",
+  "modified": "2026-10-08 16:00:00.000000",
   "base_webshop_commit": "e7f3dbd41f41233a1d6f107fd2f6b9d428256820",
   "verified_versions": {
     "frappe": "15.121.1",

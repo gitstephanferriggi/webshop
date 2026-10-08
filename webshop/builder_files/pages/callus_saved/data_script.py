@@ -8,6 +8,16 @@ data.product_code = frappe.form_dict.get('item_code', '')
 data.collection_slug = frappe.form_dict.get('name', '')
 if settings.enabled and not (settings.login_required_to_view_products and frappe.session.user == 'Guest'):
     website_items = frappe.get_all('Website Item', filters={'published': 1}, fields=['name', 'item_code', 'web_item_name', 'item_group', 'website_image', 'description', 'short_description', 'web_long_description', 'website_warehouse', 'creation'], limit_page_length=10000)
+    # Only explicitly curated images for the requested published product.
+    gallery = {}
+    selected = [item.name for item in website_items if data.product_code in (item.item_code, item.name)]
+    if selected and frappe.db.exists('DocType', 'Callus Product Image'):
+        gallery_rows = frappe.get_all('Callus Product Image', filters={'parent': ['in', selected], 'parenttype': 'Website Item', 'parentfield': 'custom_product_images'}, fields=['parent', 'image', 'caption'], order_by='idx asc', limit_page_length=100)
+        urls = [row.image for row in gallery_rows if row.image and row.image.startswith('/files/')]
+        public_urls = [row.file_url for row in frappe.get_all('File', filters={'file_url': ['in', urls], 'is_private': 0}, fields=['file_url'], limit_page_length=100)] if urls else []
+        for row in gallery_rows:
+            if row.image in public_urls:
+                gallery.setdefault(row.parent, []).append({'image': row.image, 'caption': row.caption or ''})
     codes = [item.item_code for item in website_items]
     items = frappe.get_all('Item', filters={'name': ['in', codes], 'disabled': 0}, fields=['name', 'is_stock_item', 'stock_uom'], limit_page_length=10000) if codes else []
     active = {item.name: item for item in items}
@@ -68,7 +78,7 @@ if settings.enabled and not (settings.login_required_to_view_products and frappe
         quantity = stock.get(item.item_code + '|' + (item.website_warehouse or ''), 0)
         non_stock = not active[item.item_code].is_stock_item
         visible_price = bool(settings.show_price and not (frappe.session.user == 'Guest' and settings.hide_price_for_guest))
-        data.catalogue.append({'id': item.item_code, 'web_id': item.name, 'name': item.web_item_name, 'group': item.item_group, 'group_path': trail[::-1], 'category': category, 'image': item.website_image or '', 'description': (item.web_long_description or item.short_description or item.description or '') if data.product_code in (item.item_code, item.name) else '', 'price': price.price_list_rate if price and visible_price else None, 'currency': price.currency if price else 'EUR', 'available': quantity > 0, 'quantity': quantity, 'on_request': non_stock, 'rank': ranks.get(item.item_code, 999999), 'created': str(item.creation)[:10], 'uom': active[item.item_code].stock_uom})
+        data.catalogue.append({'id': item.item_code, 'web_id': item.name, 'name': item.web_item_name, 'group': item.item_group, 'group_path': trail[::-1], 'category': category, 'image': item.website_image or '', 'images': gallery.get(item.name, []), 'description': (item.web_long_description or item.short_description or item.description or '') if data.product_code in (item.item_code, item.name) else '', 'price': price.price_list_rate if price and visible_price else None, 'currency': price.currency if price else 'EUR', 'available': quantity > 0, 'quantity': quantity, 'on_request': non_stock, 'rank': ranks.get(item.item_code, 999999), 'created': str(item.creation)[:10], 'uom': active[item.item_code].stock_uom})
 
 for product in data.catalogue:
     if data.product_code in (product["id"], product["web_id"]):

@@ -11,7 +11,7 @@ class Row(dict):
     __getattr__=dict.get
     __setattr__=dict.__setitem__
 
-def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=False,product_code='A',login_required=False,item_group='Herbs',groups=None):
+def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=False,product_code='A',login_required=False,item_group='Herbs',groups=None,gallery_rows=None,public_files=None):
     today=datetime.date(2026,9,29)
     rows={
         'Website Item':[Row(name='W-A',item_code='A',web_item_name='Basil',item_group=item_group,website_warehouse='Shop',website_image='/files/basil.jpg',description='Basil details',creation='2026-01-01')],
@@ -19,7 +19,8 @@ def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=
         'Item Price':prices if prices is not None else [Row(item_code='A',price_list_rate=3.5,currency='EUR',valid_from=None,valid_upto=None,uom='Pcs')],
         'Bin':stock if stock is not None else [Row(item_code='A',warehouse='Shop',actual_qty=10,reserved_qty=3)],
         'Item Group':groups if groups is not None else [Row(name='Herbs',parent_item_group='Herbs & Vegetables')],
-        'Sales Invoice':[Row(item_code='A',units=4)]}
+        'Sales Invoice':[Row(item_code='A',units=4)],
+        'Callus Product Image':gallery_rows or [], 'File':public_files or []}
     calls=[]
     def get_all(dt,**kw):
         calls.append((dt,kw))
@@ -28,13 +29,22 @@ def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=
         if dt=='Sales Invoice':assert kw['filters']['docstatus']==1 and kw['filters']['is_return']==0
         return rows[dt]
     utils=SimpleNamespace(getdate=lambda v=None:datetime.date.fromisoformat(str(v)) if v else today,add_days=lambda d,n:d+datetime.timedelta(days=n))
-    frappe=SimpleNamespace(db=SimpleNamespace(exists=lambda *args:False),get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
+    frappe=SimpleNamespace(db=SimpleNamespace(exists=lambda *args:bool(gallery_rows) and args == ('DocType', 'Callus Product Image')),get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
     # Keep the fixture restricted to the builtins used by Builder's data script.
     allowed_builtins={name:getattr(__import__('builtins'),name) for name in ('bool','list','str','enumerate','max','range')}
     data=Row();exec(SCRIPT,{'frappe':frappe,'data':data,'__builtins__':allowed_builtins})
     return data,calls
 
 class CatalogueTests(unittest.TestCase):
+    def test_gallery_only_public_files_for_requested_product(self):
+        data,calls=run_catalogue(gallery_rows=[Row(parent='W-A',image='/files/extra.jpg',caption='Side'),Row(parent='W-A',image='/private/files/hidden.jpg',caption='Private')],public_files=[Row(file_url='/files/extra.jpg')])
+        self.assertEqual(data.catalogue[0]['images'],[{'image':'/files/extra.jpg','caption':'Side'}])
+        query=next(kw for dt,kw in calls if dt=='Callus Product Image')
+        self.assertEqual(query['filters']['parent'],['in',['W-A']])
+        self.assertEqual(query['filters']['parenttype'],'Website Item')
+        _,calls=run_catalogue(product_code='',gallery_rows=[Row(parent='W-A',image='/files/extra.jpg')])
+        self.assertFalse(any(dt=='Callus Product Image' for dt,kw in calls))
+
     def test_published_active_only_and_correct_warehouse(self):
         data,_=run_catalogue(stock=[Row(item_code='A',warehouse='Shop',actual_qty=4,reserved_qty=2),Row(item_code='A',warehouse='Other',actual_qty=999,reserved_qty=0)])
         self.assertEqual(data.catalogue[0]['quantity'],2)

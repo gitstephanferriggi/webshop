@@ -37,6 +37,7 @@ doctype_js = {
 }
 
 doc_events = {
+    "Website Item": {"validate": "webshop.callus_storefront.product_images.validate_gallery"},
     "Sales Invoice": {
         "before_submit": "webshop.callus_storefront.notifications.mark_website_invoice",
     },
@@ -107,4 +108,4 @@ permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.
 auth_hooks = ['webshop.bolt_integration.webhooks.restrict_service_user']
 
 # Keep the independent Bolt product selection field reproducible on site migration.
-after_migrate = "webshop.bolt_integration.setup.ensure_product_flag"
+after_migrate = ["webshop.bolt_integration.setup.ensure_product_flag", "webshop.callus_storefront.product_images.setup"]
