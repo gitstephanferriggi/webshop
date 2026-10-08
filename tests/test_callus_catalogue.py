@@ -32,7 +32,7 @@ def run_catalogue(*,enabled=True,prices=None,stock=None,items=None,guest_hidden=
     frappe=SimpleNamespace(db=SimpleNamespace(exists=lambda *args:bool(gallery_rows) and args == ('DocType', 'Callus Product Image')),get_doc=lambda *args:Row(enabled=enabled,price_list='Retail',show_price=True,hide_price_for_guest=guest_hidden,login_required_to_view_products=login_required),get_all=get_all,utils=utils,form_dict=Row(item_code=product_code),session=Row(user='Guest'))
     # Keep the fixture restricted to the builtins used by Builder's data script.
     allowed_builtins={name:getattr(__import__('builtins'),name) for name in ('bool','list','str','enumerate','max','range')}
-    data=Row();exec(SCRIPT,{'frappe':frappe,'data':data,'__builtins__':allowed_builtins})
+    data=Row();exec(SCRIPT,{'frappe':frappe,'__builtins__':allowed_builtins},{'data':data})
     return data,calls
 
 class CatalogueTests(unittest.TestCase):

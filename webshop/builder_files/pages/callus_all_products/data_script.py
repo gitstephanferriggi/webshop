@@ -10,7 +10,10 @@ if settings.enabled and not (settings.login_required_to_view_products and frappe
     website_items = frappe.get_all('Website Item', filters={'published': 1}, fields=['name', 'item_code', 'web_item_name', 'item_group', 'website_image', 'description', 'short_description', 'web_long_description', 'website_warehouse', 'creation'], limit_page_length=10000)
     # Only explicitly curated images for the requested published product.
     gallery = {}
-    selected = [item.name for item in website_items if data.product_code in (item.item_code, item.name)]
+    selected = []
+    for candidate in website_items:
+        if data.product_code in (candidate.item_code, candidate.name):
+            selected.append(candidate.name)
     if selected and frappe.db.exists('DocType', 'Callus Product Image'):
         gallery_rows = frappe.get_all('Callus Product Image', filters={'parent': ['in', selected], 'parenttype': 'Website Item', 'parentfield': 'custom_product_images'}, fields=['parent', 'image', 'caption'], order_by='idx asc', limit_page_length=100)
         urls = [row.image for row in gallery_rows if row.image and row.image.startswith('/files/')]
