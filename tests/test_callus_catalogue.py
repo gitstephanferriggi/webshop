@@ -42,6 +42,7 @@ class CatalogueTests(unittest.TestCase):
         query=next(kw for dt,kw in calls if dt=='Callus Product Image')
         self.assertEqual(query['filters']['parent'],['in',['W-A']])
         self.assertEqual(query['filters']['parenttype'],'Website Item')
+        self.assertEqual(query['filters']['hide_from_website'],0)
         _,calls=run_catalogue(product_code='',gallery_rows=[Row(parent='W-A',image='/files/extra.jpg')])
         self.assertFalse(any(dt=='Callus Product Image' for dt,kw in calls))
 

@@ -61,7 +61,12 @@ def setup():
     create_custom_fields({'Website Item': [{
         'fieldname': FIELD, 'label': 'Product gallery', 'fieldtype': 'Table',
         'options': 'Callus Product Image', 'insert_after': 'website_image',
-        'description': 'Choose public photos to show after the main image. Drag rows to reorder; remove rows to hide photos. Item attachments are not added automatically.'
+        'description': 'Public Item image attachments can be imported automatically. Drag rows to reorder. Tick Hide from website or remove a row to exclude it; repeat imports preserve your choice.'
+    }, {
+        'fieldname': 'custom_gallery_import_history', 'label': 'Gallery import history',
+        'fieldtype': 'Long Text', 'hidden': 1, 'read_only': 1, 'no_copy': 1,
+        'insert_after': FIELD,
+        'description': 'Processed attachment URLs, retained to prevent deleted gallery rows being re-imported.'
     }]}, update=True)
     for dt, name, client in [
         ('Server Script', 'Callus Marketing - Website Item Fields', False),
@@ -73,3 +78,61 @@ def setup():
             if updated != doc.script:
                 doc.script = updated
                 doc.save(ignore_permissions=True)
+
+
+def plan_attachment_import(web, attachments):
+    """Pure import plan. A processed URL stays processed after row removal."""
+    history = set(json.loads(web.get('custom_gallery_import_history') or '[]'))
+    existing = {row.get('image') for row in (web.get(FIELD) or [])}
+    processed = history | existing
+    additions = []
+    remaining = max(0, 20 - len(web.get(FIELD) or []))
+    for attachment in attachments:
+        url = attachment.get('file_url') or ''
+        if attachment.get('is_private') or not url.startswith('/files/'):
+            continue
+        if not urlsplit(url).path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif')):
+            continue
+        if url in processed:
+            continue
+        if url == web.get('website_image'):
+            processed.add(url)
+            continue
+        if len(additions) >= remaining:
+            continue  # Not processed: a later run can fill newly available slots.
+        additions.append({'image': url, 'caption': '', 'hide_from_website': 0})
+        processed.add(url)
+    return additions, json.dumps(sorted(processed))
+
+
+def import_item_attachments(dry_run=True):
+    """Run via bench execute; dry-run by default. Never changes attachment privacy.
+
+    Run explicitly after migration. No import on every save or migration, so a
+    deployment cannot silently publish new photos. Re-runs add new URLs only.
+    """
+    if frappe.session.user != 'Administrator' and 'System Manager' not in frappe.get_roles():
+        frappe.throw('Only a System Manager may import product attachments.', frappe.PermissionError)
+    dry_run = frappe.utils.cint(dry_run)
+    summary = {'dry_run': bool(dry_run), 'products_changed': 0, 'images_added': 0, 'errors': []}
+    for name in frappe.get_all('Website Item', pluck='name', order_by='name'):
+        frappe.db.savepoint('gallery_import_product')
+        try:
+            web = frappe.get_doc('Website Item', name)
+            attachments = frappe.get_all('File', filters={
+                'attached_to_doctype': 'Item', 'attached_to_name': web.item_code, 'is_private': 0,
+            }, fields=['file_url', 'is_private'], order_by='creation asc, name asc')
+            additions, history = plan_attachment_import(web, attachments)
+            changed = history != (web.get('custom_gallery_import_history') or '[]')
+            if not dry_run and changed:
+                for row in additions:
+                    web.append(FIELD, row)
+                web.custom_gallery_import_history = history
+                web.save()  # Preserve standard validation, permissions and cache invalidation.
+            summary['products_changed'] += int(bool(additions))
+            summary['images_added'] += len(additions)
+        except Exception:
+            frappe.db.rollback(save_point='gallery_import_product')
+            summary['errors'].append(name)
+            frappe.log_error(title='Product gallery import: ' + name)
+    return summary

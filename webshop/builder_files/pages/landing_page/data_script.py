@@ -15,7 +15,7 @@ if settings.enabled and not (settings.login_required_to_view_products and frappe
         if data.product_code in (candidate.item_code, candidate.name):
             selected.append(candidate.name)
     if selected and frappe.db.exists('DocType', 'Callus Product Image'):
-        gallery_rows = frappe.get_all('Callus Product Image', filters={'parent': ['in', selected], 'parenttype': 'Website Item', 'parentfield': 'custom_product_images'}, fields=['parent', 'image', 'caption'], order_by='idx asc', limit_page_length=100)
+        gallery_rows = frappe.get_all('Callus Product Image', filters={'parent': ['in', selected], 'parenttype': 'Website Item', 'parentfield': 'custom_product_images', 'hide_from_website': 0}, fields=['parent', 'image', 'caption'], order_by='idx asc', limit_page_length=100)
         urls = [row.image for row in gallery_rows if row.image and row.image.startswith('/files/')]
         public_urls = [row.file_url for row in frappe.get_all('File', filters={'file_url': ['in', urls], 'is_private': 0}, fields=['file_url'], limit_page_length=100)] if urls else []
         for row in gallery_rows:

@@ -7,7 +7,8 @@
   "engine": "InnoDB",
   "field_order": [
     "image",
-    "caption"
+    "caption",
+    "hide_from_website"
   ],
   "fields": [
     {
@@ -21,6 +22,13 @@
       "fieldname": "caption",
       "label": "Image description",
       "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "hide_from_website",
+      "label": "Hide from website",
+      "fieldtype": "Check",
+      "default": "0",
       "in_list_view": 1
     }
   ],

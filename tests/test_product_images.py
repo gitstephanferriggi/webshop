@@ -48,4 +48,26 @@ class Images(unittest.TestCase):
             self.assertIn('website_image',changed)
             if not client:self.assertIn('# guard',changed);self.assertIn('custom_bolt_enabled',changed)
 
+
+class AttachmentImport(unittest.TestCase):
+    def test_new_images_only_and_privacy(self):
+        web={'website_image':'/files/main.jpg','custom_product_images':[]}
+        files=[{'file_url':url,'is_private':private} for url,private in [('/files/main.jpg',0),('/files/extra.jpg',0),('/files/extra.jpg',0),('/private/files/secret.jpg',1),('/files/invoice.pdf',0)]]
+        rows,history=m.plan_attachment_import(web,files)
+        self.assertEqual([r['image'] for r in rows],['/files/extra.jpg'])
+        self.assertEqual(rows[0]['hide_from_website'],0)
+        # Removed row remains absent on rerun.
+        web['custom_gallery_import_history']=history
+        self.assertEqual(m.plan_attachment_import(web,files)[0],[])
+    def test_hidden_and_manually_selected_photos_preserved(self):
+        rows=[{'image':'/files/hidden.jpg','hide_from_website':1,'caption':'Keep caption'}]
+        web={'custom_product_images':rows}
+        new,history=m.plan_attachment_import(web,[{'file_url':'/files/hidden.jpg'}])
+        self.assertEqual(new,[]);self.assertEqual(rows[0]['hide_from_website'],1)
+        self.assertIn('/files/hidden.jpg',history)
+    def test_limit_preserves_unprocessed_photos_for_later(self):
+        web={'custom_product_images':[{'image':f'/files/{i}.jpg'} for i in range(20)]}
+        rows,history=m.plan_attachment_import(web,[{'file_url':'/files/new.jpg'}])
+        self.assertEqual(rows,[]);self.assertNotIn('/files/new.jpg',history)
+
 if __name__=='__main__':unittest.main()
