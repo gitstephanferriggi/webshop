@@ -44,6 +44,9 @@ class OriginTests(unittest.TestCase):
         self.order.order_type='Sales';self.assertFalse(self.classify(invoice()))
     def test_mixed_manual_and_website_invoice_is_excluded(self):
         self.assertFalse(self.classify(invoice(items=[Row(sales_order='WEB-ORDER'),Row(sales_order=None)])))
+    def test_hospice_uses_campaign_emails_only(self):
+        self.checkout['campaign']='hospice'
+        self.assertFalse(self.classify(invoice(flags=frappe._dict(callus_verified_checkout='CHECKOUT'))))
     def test_stale_marker_is_cleared(self):
         doc=invoice(is_pos=1,flags=frappe._dict(callus_website_order=True));self.assertFalse(self.classify(doc))
 if __name__=='__main__':unittest.main()

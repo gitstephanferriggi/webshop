@@ -143,16 +143,21 @@ def options():
         return {"enabled": False, "delivery": False}
 
 
-def _stock(items, lock=False):
+def _stock(items, lock=False, campaign=None):
     """Recheck publication, sale eligibility and stock at both quote and submit."""
     result = []
+    hospice_settings = None
+    if campaign == "hospice":
+        from webshop.callus_storefront.hospice import campaign_settings, validate_selection
+        hospice_settings = campaign_settings()
+        validate_selection(items, hospice_settings)
     for row in items:
         item = frappe.get_cached_doc("Item", row["id"])
         web = frappe.db.get_value("Website Item", {"item_code":item.name,"published":1},
                                   ["name","website_warehouse"], as_dict=True)
-        if not web or item.disabled or not item.is_sales_item or item.has_variants:
+        if (not web and not hospice_settings) or item.disabled or not item.is_sales_item or item.has_variants or item.is_fixed_asset:
             fail("An item is no longer available. Please review your basket.")
-        warehouse = web.website_warehouse
+        warehouse = hospice_settings.hospice_warehouse if hospice_settings else web.website_warehouse
         if item.is_stock_item:
             stock = frappe.db.sql("SELECT actual_qty, reserved_qty FROM `tabBin` WHERE item_code=%s AND warehouse=%s"
                 + (" FOR UPDATE" if lock else ""), (item.name, warehouse), as_dict=True)
@@ -169,11 +174,15 @@ def _new_order(doc, items, buyer, shop, settings):
     from frappe.utils.nestedset import get_root_of
     from erpnext.accounts.party import set_taxes
     name = buyer["first_name"] + " " + buyer["last_name"]
-    customer = frappe.get_doc({"doctype":"Customer","customer_name":name,
-        "customer_type":"Individual","customer_group":shop.default_customer_group,
-        "territory":get_root_of("Territory")}).insert(ignore_permissions=True, set_name="WEB-" + doc.name[:20])
+    if doc.get("campaign") == "hospice":
+        from webshop.callus_storefront.hospice import campaign_settings
+        customer = frappe.get_doc("Customer", campaign_settings().hospice_customer)
+    else:
+        customer = frappe.get_doc({"doctype":"Customer","customer_name":name,
+            "customer_type":"Individual","customer_group":shop.default_customer_group,
+            "territory":get_root_of("Territory")}).insert(ignore_permissions=True, set_name="WEB-" + doc.name[:20])
     # Never attach an anonymous checkout to a customer/account based only on email.
-    address = frappe.get_doc({"doctype":"Address","address_title":name,"address_type":"Billing",
+    address = frappe.get_doc({"doctype":"Address","address_title":name,"address_type":"Shipping" if doc.get("campaign") else "Billing",
         "address_line1":buyer["address"],"city":buyer["town"],"pincode":buyer["postcode"],
         "country":"Malta","email_id":buyer["email"],"phone":buyer["phone"],
         "links":[{"link_doctype":"Customer","link_name":customer.name}]}).insert(ignore_permissions=True)
@@ -186,11 +195,14 @@ def _new_order(doc, items, buyer, shop, settings):
         "selling_price_list":shop.price_list,"currency":"EUR","customer_address":address.name,
         "shipping_address_name":address.name if buyer["delivery"] == "delivery" else None,
         "contact_person":contact.name,"contact_email":buyer["email"],"contact_mobile":buyer["phone"],
-        "items":_stock(items),"remarks":"Website " + buyer["delivery"] + "; checkout " + doc.name[:12]})
+        "items":_stock(items, campaign=doc.get("campaign")),"remarks":"Website " + buyer["delivery"] + "; checkout " + doc.name[:12]})
+    if doc.get("campaign") == "hospice":
+        from webshop.callus_storefront.hospice import decorate_order
+        decorate_order(order, buyer)
     order.flags.ignore_permissions = True
     order.run_method("set_missing_values")
     order.taxes_and_charges = set_taxes(customer.name, "Customer", nowdate(), shop.company,
-        customer_group=shop.default_customer_group, tax_category=order.tax_category,
+        customer_group=customer.customer_group, tax_category=order.tax_category,
         billing_address=address.name, shipping_address=order.shipping_address_name, use_for_shopping_cart=1)
     order.set("taxes", [])
     order.append_taxes_from_master()
@@ -222,23 +234,31 @@ def _new_order(doc, items, buyer, shop, settings):
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=10, seconds=60)
 def prepare(token, items, buyer):
+    return _prepare(token, items, buyer)
+
+
+def _prepare(token, items, buyer, campaign=None):
     try:
         name = checkout_id(token)
-        items, buyer = normalise_request(frappe.parse_json(items), frappe.parse_json(buyer))
+        raw_buyer = frappe.parse_json(buyer)
+        items, buyer = normalise_request(frappe.parse_json(items), raw_buyer)
+        if campaign == "hospice":
+            from webshop.callus_storefront.hospice import clean_buyer
+            buyer = clean_buyer(buyer, raw_buyer)
     except (ValueError, TypeError) as e:
         fail(str(e))
     digest = fingerprint(items, buyer)
     with _locked(name):
         if frappe.db.exists("Callus Checkout", name):
             doc = frappe.get_doc("Callus Checkout", name)
-            if doc.request_hash != digest:
+            if doc.request_hash != digest or (doc.get("campaign") or None) != campaign:
                 fail("Your basket changed. Please start a new checkout.")
             return _public(doc)
         settings = _settings()
         shop, account, live = _gateway(settings)
         if buyer["delivery"] == "delivery" and not settings.delivery_rule:
             fail("Please choose collection; delivery is not configured yet.")
-        doc = frappe.get_doc({"doctype":"Callus Checkout","status":"Draft","request_hash":digest,
+        doc = frappe.get_doc({"doctype":"Callus Checkout","status":"Draft","request_hash":digest,"campaign":campaign,
             "buyer":json.dumps(buyer),"basket":json.dumps(items),"expires_at":int(time.time())+1800,
             "stripe_settings":settings.stripe_settings,"payment_account":account.payment_account,"is_live":int(live)})
         doc.name = name
@@ -251,7 +271,7 @@ def prepare(token, items, buyer):
 @_internal_erp
 def _submit_order(doc, order):
     if order.docstatus == 0:
-        _stock(json.loads(doc.basket), lock=True)
+        _stock(json.loads(doc.basket), lock=True, campaign=doc.get("campaign"))
         order.flags.ignore_permissions = True
         order.submit()
         if cents(order.rounded_total or order.grand_total) != doc.amount_minor:
@@ -281,6 +301,7 @@ def pay(token):
         # Persist the order before creating a remotely payable session. A timeout
         # can be retried with exactly the same Stripe idempotency key and data.
         _save(doc)
+        return_path = "/hospice" if doc.get("campaign") == "hospice" else "/checkout"
         body = {"mode":"payment","payment_method_types[0]":"card",
             "client_reference_id":doc.name,"metadata[callus_checkout]":doc.name,
             "payment_intent_data[metadata][callus_checkout]":doc.name,
@@ -289,8 +310,8 @@ def pay(token):
             "line_items[0][price_data][unit_amount]":doc.amount_minor,
             "line_items[0][price_data][product_data][name]":"Callus order " + doc.sales_order,
             "line_items[0][quantity]":1,
-            "success_url":settings.site_url.rstrip("/")+"/checkout?payment=returned",
-            "cancel_url":settings.site_url.rstrip("/")+"/checkout?payment=cancelled",
+            "success_url":settings.site_url.rstrip("/")+return_path+"?payment=returned",
+            "cancel_url":settings.site_url.rstrip("/")+return_path+"?payment=cancelled",
             "expires_at":doc.expires_at + 1800}
         if doc.stripe_request:
             body = json.loads(doc.stripe_request)

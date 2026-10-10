@@ -26,7 +26,12 @@
   "refund_entry",
   "sales_invoice",
   "credit_note",
-  "stripe_request"
+  "stripe_request",
+  "campaign",
+  "tracking_hash",
+  "tracking_expires_at",
+  "tracking_revoked",
+  "campaign_notified"
  ],
  "fields": [
   {
@@ -149,6 +154,37 @@
    "fieldtype": "Code",
    "label": "Stripe Request",
    "options": "JSON"
+  },
+  {
+   "fieldname": "campaign",
+   "fieldtype": "Data",
+   "label": "Campaign",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tracking_hash",
+   "fieldtype": "Data",
+   "label": "Tracking Hash",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "tracking_expires_at",
+   "fieldtype": "Int",
+   "label": "Tracking Expires At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tracking_revoked",
+   "fieldtype": "Check",
+   "label": "Tracking Revoked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "campaign_notified",
+   "fieldtype": "Check",
+   "label": "Campaign Emails Queued",
+   "read_only": 1
   }
  ],
  "permissions": [

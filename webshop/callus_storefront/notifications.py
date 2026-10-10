@@ -90,6 +90,9 @@ def mark_website_invoice(doc, method=None):
     checkout_name = doc.flags.get('callus_verified_checkout')
     if checkout_name:
         checkout = frappe.get_doc('Callus Checkout', checkout_name)
+        # Campaign mail is queued after reconciliation, using its buyer snapshot.
+        if checkout.get("campaign") == "hospice":
+            return
         doc.flags.callus_website_order = bool(
             order_names == {checkout.sales_order} and checkout.stripe_session
             and checkout.customer == doc.customer

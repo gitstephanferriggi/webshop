@@ -13,7 +13,13 @@
   "webhook_secret",
   "delivery_rule",
   "maximum_order_total",
-  "webhook_endpoint"
+  "webhook_endpoint",
+  "hospice_section",
+  "hospice_enabled",
+  "hospice_customer",
+  "hospice_warehouse",
+  "hospice_items",
+  "hospice_test_email"
  ],
  "fields": [
   {
@@ -64,6 +70,42 @@
    "fieldtype": "Data",
    "label": "Stripe Webhook Endpoint",
    "read_only": 1
+  },
+  {
+   "fieldname": "hospice_section",
+   "fieldtype": "Section Break",
+   "label": "Hospice Malta"
+  },
+  {
+   "fieldname": "hospice_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Public Hospice Orders",
+   "default": "0"
+  },
+  {
+   "fieldname": "hospice_customer",
+   "fieldtype": "Link",
+   "label": "Hospice Cash Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "hospice_warehouse",
+   "fieldtype": "Link",
+   "label": "Hospice Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "hospice_items",
+   "fieldtype": "Table",
+   "label": "Hospice Products",
+   "options": "Callus Campaign Item"
+  },
+  {
+   "fieldname": "hospice_test_email",
+   "fieldtype": "Data",
+   "label": "Hospice Test Email",
+   "options": "Email",
+   "description": "Required in Stripe test mode. Routes both emails to this address."
   }
  ],
  "permissions": [

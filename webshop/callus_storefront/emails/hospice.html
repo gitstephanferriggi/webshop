@@ -1,0 +1,19 @@
+<div style="background:#f7f6f0;padding:28px;font:16px Arial,sans-serif;color:#24392e">
+<div style="max-width:620px;margin:auto;background:white;padding:28px;border-radius:12px">
+<img src="https://www.callusgardencentre.com/wp-content/uploads/2023/05/Logo-Transparent.png" alt="Callus Garden Centre" width="110">
+<p style="color:#58734b">CALLUS GARDEN CENTRE · SUPPORTING HOSPICE MALTA</p>
+<h1 style="font:32px Georgia,serif">{{ 'A Hospice order to prepare.' if business else 'Thank you for your support.' }}</h1>
+<p>{{ 'Hello team,' if business else 'Hello ' ~ buyer.first_name | e ~ ',' }}</p>
+<p>{{ 'Payment is confirmed. Please prepare the following Hospice order.' if business else 'Your payment is confirmed and we have received your order.' }}</p>
+<p>{{ donation | e }}</p>
+<p><strong>Order {{ order | e }}</strong><br>Delivery within <strong>3–5 working days</strong>.</p>
+<table width="100%" cellpadding="8"><tr><th align="left">Product</th><th>Qty</th></tr>
+{% for row in summary['items'] %}<tr><td>{{ row.name | e }}</td><td align="center">{{ row.qty }}</td></tr>{% endfor %}</table>
+<p><strong>Total paid: €{{ '%.2f' | format(summary.total) }}</strong><br>Delivery included in total: €{{ '%.2f' | format(summary.delivery_fee) }}</p>
+<p><strong>Delivery to</strong><br>{{ buyer.first_name | e }} {{ buyer.last_name | e }}<br>
+{% if buyer.company %}{{ buyer.company | e }}<br>{% endif %}{{ buyer.address | e }}<br>{{ buyer.town | e }} {{ buyer.postcode | e }}<br>Malta</p>
+{% if buyer.instructions %}<p>Delivery instructions: {{ buyer.instructions | e }}</p>{% endif %}
+{% if business %}<p>Email: {{ buyer.email | e }}<br>Phone: {{ buyer.phone | e }}</p><p><a href="{{ staff_url | e }}">Open order in ERPNext</a></p>
+{% else %}<p><a href="{{ tracking_url | e }}" style="display:inline-block;background:#244c3a;color:white;padding:14px 22px;border-radius:6px">Follow your order</a></p><p style="font-size:13px">Keep this link private. It shows this order’s progress and expires after 180 days.</p>{% endif %}
+<p>With thanks,<br>The Callus team</p><hr><p>sales@callusgardencentre.com<br>+356 2146 2229 · +356 9911 9529</p>
+</div></div>

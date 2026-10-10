@@ -97,7 +97,7 @@ fixtures = [
 ]
 
 # Retries missed Stripe callbacks without depending on the customer return page.
-scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending", "webshop.bolt_integration.processing.process_pending", "webshop.bolt_integration.sync.tick"]}}
+scheduler_events = {"cron": {"*/5 * * * *": ["webshop.callus_storefront.checkout.reconcile_pending", "webshop.callus_storefront.hospice.queue_pending_emails", "webshop.bolt_integration.processing.process_pending", "webshop.bolt_integration.sync.tick"]}}
 
 # Marcella's account must not inherit unrelated access from All / Guest.
 # Hooks return None for every other user and never grant permissions.
@@ -108,4 +108,7 @@ permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.
 auth_hooks = ['webshop.bolt_integration.webhooks.restrict_service_user']
 
 # Keep the independent Bolt product selection field reproducible on site migration.
-after_migrate = ["webshop.bolt_integration.setup.ensure_product_flag", "webshop.callus_storefront.product_images.setup"]
+after_migrate = ["webshop.callus_storefront.hospice.setup", "webshop.bolt_integration.setup.ensure_product_flag", "webshop.callus_storefront.product_images.setup"]
+
+# Public campaign responses must never be cached or embedded.
+after_request = ["webshop.callus_storefront.hospice.private_response"]
