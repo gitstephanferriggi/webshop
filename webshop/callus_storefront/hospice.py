@@ -184,7 +184,7 @@ def queue_pending_emails():
 
 
 @frappe.whitelist(methods=["POST"])
-def configure(enable=0, test_email=None):
+def configure(enable=0, test_email=None, warehouse=None):
     """Explicit manager setup; migrations never enable the public campaign."""
     frappe.only_for("System Manager")
     from frappe.utils.nestedset import get_root_of
@@ -196,6 +196,11 @@ def configure(enable=0, test_email=None):
         frappe.throw("The existing product selection is not assigned to Hospice. Please review it first.")
     if source.company != shop.company or not source.allowed_items:
         frappe.throw("Review the existing Hospice product selection and company first.")
+    if warehouse is not None:
+        selected_warehouse = frappe.get_doc("Warehouse", warehouse)
+        if selected_warehouse.disabled or selected_warehouse.is_group or selected_warehouse.company != shop.company:
+            frappe.throw("Select an active stock warehouse for the webshop company.")
+        settings.hospice_warehouse = selected_warehouse.name
     if not settings.hospice_customer:
         existing = frappe.get_all("Customer", filters={"customer_name":CUSTOMER_NAME}, pluck="name")
         if len(existing) > 1:
