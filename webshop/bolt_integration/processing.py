@@ -29,7 +29,11 @@ def process_pending():
     for name in frappe.get_all('Callus Bolt Event',filters={'status':['in',['Captured','Retry']]},order_by='creation asc',limit=50,pluck='name'):
         frappe.db.savepoint('bolt_process')
         try:
-            event=frappe.get_doc('Callus Bolt Event',name)
+            # Re-read under lock: another worker may have completed this queued event.
+            event=frappe.get_doc('Callus Bolt Event',name,for_update=True)
+            if event.status not in ('Captured', 'Retry'):
+                frappe.db.commit()
+                continue
             process_event(event,s)
             frappe.db.commit()
         except Exception as exc:
@@ -58,8 +62,8 @@ def process_event(event,s):
                             'status':'Received'}).insert(ignore_permissions=True)
         except frappe.DuplicateEntryError:
             pass
-    frappe.db.sql('select name from `tabCallus Bolt Order` where name=%s for update',(key,))
-    order=frappe.get_doc('Callus Bolt Order',key)
+    # A locking read also avoids a stale repeatable-read snapshot after waiting.
+    order=frappe.get_doc('Callus Bolt Order',key,for_update=True)
     if event.event_type=='cancel_order':
         if getattr(s, 'two_way_enabled', 0) and order.get('workflow_state'):
             frappe.db.savepoint('bolt_cancel')

@@ -13,6 +13,23 @@ class ProcessingTests(unittest.TestCase):
  def event(self,kind='new_order'):
   import json
   return NS(is_test=0,provider_verified=1,provider_id='P',bolt_order_id='42',event_type=kind,payload=json.dumps({'items':[],'total_order_price':{'value':0,'currency':'EUR'}}),db_set=MagicMock())
+ def test_completed_event_is_skipped_after_lock(self):
+  self.f.get_all.return_value=['event1']
+  self.f.get_doc.return_value=NS(status='Processed')
+  with patch.object(self.p,'enabled_settings',return_value=NS()), patch.object(self.p,'process_event') as process:
+   self.p.process_pending()
+  self.f.get_doc.assert_called_once_with('Callus Bolt Event','event1',for_update=True)
+  process.assert_not_called()
+  self.f.db.commit.assert_called_once()
+ def test_pending_event_is_processed_under_lock(self):
+  self.f.get_all.return_value=['event1']
+  event=NS(status='Captured');self.f.get_doc.return_value=event
+  settings=NS()
+  with patch.object(self.p,'enabled_settings',return_value=settings), patch.object(self.p,'process_event') as process:
+   self.p.process_pending()
+  self.f.get_doc.assert_called_once_with('Callus Bolt Event','event1',for_update=True)
+  process.assert_called_once_with(event,settings)
+  self.f.db.commit.assert_called_once()
  def test_due_time_is_site_local_without_timezone_for_mariadb(self):
   from datetime import datetime, timezone
   from zoneinfo import ZoneInfo
