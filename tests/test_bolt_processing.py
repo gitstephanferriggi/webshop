@@ -37,6 +37,14 @@ class ProcessingTests(unittest.TestCase):
   self.p.cancel_sale(link)
   so.add_comment.assert_called_once_with('Comment','Cancelled by Bolt; do not fulfil.')
   self.assertEqual(link.status,'Cancelled')
+ def test_pickup_receipt_does_not_create_another_sale(self):
+  import json
+  e=self.event('courier_picked_up');e.payload=json.dumps({'pickup_ts':100})
+  order=NS(status='Recorded',sales_order='SO1',workflow_state='Collected',get=lambda key:0,save=MagicMock())
+  self.f.get_doc.return_value=order;self.f.db.exists.return_value=True
+  with patch.object(self.p,'create_sale') as create:
+   self.p.process_event(e,NS(provider_id='P'));create.assert_not_called()
+  self.assertEqual(order.courier_pickup_ts,100);self.assertEqual(order.workflow_state,'Collected')
  def test_basket_content_change_detected_even_same_total(self):
   self.assertNotEqual(self.p.basket_hash({'items':[{'sku':'A'}],'total_order_price':{'value':10}}),self.p.basket_hash({'items':[{'sku':'B'}],'total_order_price':{'value':10}}))
 if __name__=='__main__':unittest.main()

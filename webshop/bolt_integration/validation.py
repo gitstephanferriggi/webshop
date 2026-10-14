@@ -4,7 +4,7 @@ import json
 import math
 
 MAX_BYTES = 512 * 1024
-EVENTS = ('new_order', 'cancel_order', 'order_update', 'provider_status', 'courier_details')
+EVENTS = ('new_order', 'cancel_order', 'order_update', 'provider_status', 'courier_details', 'courier_picked_up')
 
 
 def canonical(payload):
@@ -34,13 +34,15 @@ def validate(event, payload):
     order = ''
     if event != 'provider_status':
         order = identifier(payload.get('main_order_id' if event == 'order_update' else 'order_id'))
-    if event in ('new_order', 'cancel_order', 'courier_details'):
+    if event in ('new_order', 'cancel_order', 'courier_details', 'courier_picked_up'):
         identifier(payload.get('order_reference_id'))
     if event == 'new_order':
         if payload.get('order_type') not in ('delivery', 'pickup', 'own_delivery'):
             raise ValueError('Invalid order type')
         if payload.get('payment_type') not in ('cash', 'card_online'):
             raise ValueError('Invalid payment type')
+        if payload.get('max_acceptance_ts') is not None:
+            number(payload['max_acceptance_ts'])
         for key in ('created_ts', 'due_ts'):
             number(payload.get(key))
         for key in ('created_datetime', 'due_datetime'):
@@ -68,6 +70,8 @@ def validate(event, payload):
     elif event == 'provider_status':
         if payload.get('new_status') not in ('active', 'inactive'):
             raise ValueError('Invalid provider status')
+    elif event == 'courier_picked_up':
+        number(payload.get('pickup_ts'))
     elif event == 'courier_details':
         if not isinstance(payload.get('courier'), dict):
             raise ValueError('Missing courier object')

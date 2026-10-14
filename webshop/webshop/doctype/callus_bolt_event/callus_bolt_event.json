@@ -24,7 +24,7 @@
    "fieldname": "event_type",
    "fieldtype": "Select",
    "label": "Event Type",
-   "options": "new_order\ncancel_order\norder_update\nprovider_status\ncourier_details",
+   "options": "new_order\ncancel_order\norder_update\nprovider_status\ncourier_details\ncourier_picked_up",
    "in_list_view": 1
   },
   {

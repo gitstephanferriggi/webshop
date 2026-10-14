@@ -13,7 +13,27 @@
   "sales_invoice",
   "source_amount",
   "last_bolt_status",
-  "source_hash"
+  "source_hash",
+  "workflow_state",
+  "acknowledged_by",
+  "acknowledged_at",
+  "assigned_to",
+  "order_type",
+  "payment_type",
+  "order_reference",
+  "due_at",
+  "acceptance_deadline",
+  "picking",
+  "operation",
+  "operation_state",
+  "operation_error",
+  "operation_started",
+  "handover_by",
+  "handover_at",
+  "courier_pickup_ts",
+  "adjustment_plan",
+  "adjustment_reason",
+  "attention_from"
  ],
  "fields": [
   {
@@ -63,6 +83,130 @@
    "fieldname": "source_hash",
    "fieldtype": "Data",
    "label": "Source basket hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "workflow_state",
+   "label": "POS workflow",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledged_by",
+   "label": "Acknowledged by",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledged_at",
+   "label": "Acknowledged at",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "assigned_to",
+   "label": "Picker",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_type",
+   "label": "Delivery type",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_type",
+   "label": "Payment type",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_reference",
+   "label": "Customer order reference",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "due_at",
+   "label": "Due at",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acceptance_deadline",
+   "label": "Acceptance deadline (Unix)",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "picking",
+   "label": "Picking progress",
+   "fieldtype": "Code",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation",
+   "label": "Last remote action",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation_state",
+   "label": "Remote action state",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation_error",
+   "label": "Requires attention",
+   "fieldtype": "Small Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation_started",
+   "label": "Action started",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "handover_by",
+   "label": "Handed over by",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "handover_at",
+   "label": "Handed over at",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "courier_pickup_ts",
+   "label": "Bolt courier pickup timestamp",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "adjustment_plan",
+   "label": "Approved adjustment",
+   "fieldtype": "Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "adjustment_reason",
+   "label": "Adjustment reason",
+   "fieldtype": "Small Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attention_from",
+   "label": "Stage before reported problem",
+   "fieldtype": "Data",
    "read_only": 1
   }
  ],

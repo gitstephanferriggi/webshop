@@ -1,6 +1,6 @@
 """Idempotent ERP sales processing from the durable Bolt inbox.
 
-Disabled by default. Order acceptance/picking and settlement stay with Bolt.
+Disabled by default. Optional POS operations enrol new orders into a separate workflow.
 No customer emails, payment entries or stock ledger postings are initiated here.
 """
 import json
@@ -45,6 +45,8 @@ def process_event(event,s):
         return
     p=json.loads(event.payload)
     if event.event_type=='provider_status':
+        from frappe.utils import now_datetime
+        frappe.db.set_single_value('Callus Bolt Settings', {'provider_status': p['new_status'], 'provider_status_at': now_datetime()})
         event.db_set('status','Processed')
         return
     key=order_key(event.provider_id,event.bolt_order_id)
@@ -59,7 +61,18 @@ def process_event(event,s):
     frappe.db.sql('select name from `tabCallus Bolt Order` where name=%s for update',(key,))
     order=frappe.get_doc('Callus Bolt Order',key)
     if event.event_type=='cancel_order':
-        cancel_sale(order)
+        if getattr(s, 'two_way_enabled', 0) and order.get('workflow_state'):
+            frappe.db.savepoint('bolt_cancel')
+            try:
+                cancel_sale(order)
+                order.workflow_state = 'Cancelled'
+            except Exception:
+                frappe.db.rollback(save_point='bolt_cancel')
+                order = frappe.get_doc('Callus Bolt Order', key)
+                order.workflow_state = 'Needs attention'
+                order.operation_error = 'Bolt cancelled this order. Its posted sale or stock requires manager return/refund review.'
+        else:
+            cancel_sale(order)
     elif event.event_type=='new_order':
         if order.status=='Cancelled':
             pass # Never resurrect an order cancelled before its creation callback.
@@ -70,6 +83,13 @@ def process_event(event,s):
             create_sale(order,p,s)
     elif event.event_type=='order_update':
         order.last_bolt_status=p.get('request_type')
+    elif event.event_type=='courier_picked_up':
+        order.courier_pickup_ts = max(order.get('courier_pickup_ts') or 0, p['pickup_ts'])
+        order.last_bolt_status = 'Courier picked up order'
+        # Preserve accounting and cancellation states. A callback is not a new sale.
+        if order.status == 'Cancelled':
+            order.workflow_state = 'Needs attention'
+            order.operation_error = 'Bolt reports pickup of a cancelled order. Manager review required.'
     elif event.event_type=='courier_details':
         # Retain courier data only in the restricted event; never public remarks.
         order.last_bolt_status='Courier details received'
@@ -104,7 +124,23 @@ def create_sale(link,p,s):
     link.source_amount=float(money(p['total_order_price']['value']))
     link.source_hash=basket_hash(p)
     link.status='Draft Sale'
-    if s.submit_sales:
+    if getattr(s, 'two_way_enabled', 0):
+        link.workflow_state = 'New'
+        link.order_reference = str(p.get('order_reference_id') or p['order_id'])
+        link.order_type = p.get('order_type')
+        link.payment_type = p.get('payment_type')
+        link.acceptance_deadline = p.get('max_acceptance_ts') or 0
+        from datetime import datetime, timezone
+        from frappe.utils import convert_utc_to_system_timezone
+        link.due_at = convert_utc_to_system_timezone(datetime.fromtimestamp(p['due_ts'], timezone.utc).replace(tzinfo=None))
+        link.picking = '{}'
+        if link.get('courier_pickup_ts'):
+            link.workflow_state = 'Needs attention'
+            link.operation_error = 'Pickup arrived before the order. Verify with Bolt before fulfilling.'
+        if link.payment_type != 'card_online' or link.order_type != 'delivery':
+            link.workflow_state = 'Needs attention'
+            link.operation_error = 'Unsupported payment or delivery type. Contact Bolt before fulfilment.'
+    elif s.submit_sales:
         so.submit()
         from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
         invoice=make_sales_invoice(so.name,ignore_permissions=True)

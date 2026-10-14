@@ -26,7 +26,16 @@
   "last_synced_skus",
   "last_sync",
   "sync_error",
-  "last_catalogue_hash"
+  "last_catalogue_hash",
+  "two_way_enabled",
+  "pos_profile",
+  "warehouse",
+  "provider_status",
+  "provider_status_at",
+  "store_action",
+  "store_action_state",
+  "store_action_at",
+  "store_action_by"
  ],
  "fields": [
   {
@@ -158,6 +167,61 @@
    "fieldname": "last_catalogue_hash",
    "fieldtype": "Data",
    "label": "Last catalogue hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "two_way_enabled",
+   "label": "Enable POS Bolt operations",
+   "fieldtype": "Check",
+   "default": "0",
+   "description": "Enable only after Bolt grants two-way access and UAT tests pass. Existing orders are not enrolled automatically."
+  },
+  {
+   "fieldname": "pos_profile",
+   "label": "Bolt handling POS Profile",
+   "fieldtype": "Link",
+   "options": "POS Profile"
+  },
+  {
+   "fieldname": "warehouse",
+   "label": "Bolt fulfilment warehouse",
+   "fieldtype": "Link",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "provider_status",
+   "label": "Last reported store status",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "provider_status_at",
+   "label": "Store status reported at",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "store_action",
+   "label": "Last store request",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "store_action_state",
+   "label": "Store request state",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "store_action_at",
+   "label": "Store request at",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "store_action_by",
+   "label": "Store request by",
+   "fieldtype": "Data",
    "read_only": 1
   }
  ],

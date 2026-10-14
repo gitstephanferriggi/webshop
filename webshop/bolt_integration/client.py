@@ -12,6 +12,8 @@ def request(settings,path,payload):
     signature=base64.b64encode(hmac.new(settings.get_password('secret_key').encode(),raw,hashlib.sha256).digest()).decode()
     response=requests.post(BASE+path,data=raw,headers={'Content-Type':'application/json',
         'x-external-integrator-id':settings.integrator_id,'x-server-authorization-hmac-sha256':signature},timeout=45)
+    if response.status_code == 304 and path in ('/genericClient/startAcceptingOrders', '/genericClient/pauseOrders'):
+        return {'unchanged': True}
     response.raise_for_status()
     data=response.json()
     if data.get('code',0)!=0 or data.get('errors') or data.get('warnings'):

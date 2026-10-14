@@ -6,3 +6,11 @@ def ensure_product_flag():
         'in_standard_filter': 1,
         'description': 'Include this product in the Bolt Food catalogue independently of website publication. Changes take effect on the next successful synchronisation.'
     }]}, update=True)
+
+
+def ensure_operations_roles():
+    import frappe
+    for role in ('Bolt Order Operator', 'Bolt Order Manager'):
+        if not frappe.db.exists('Role', role):
+            frappe.get_doc({'doctype': 'Role', 'role_name': role, 'desk_access': 1}).insert(ignore_permissions=True)
+    # Roles are intentionally not assigned to any user by migration.

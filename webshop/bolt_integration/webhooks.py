@@ -96,8 +96,9 @@ def _receive(event):
         if not key:
             raise
         return {'ok': True, 'received': True, 'duplicate': True, 'mode': 'capture_only'}
-    # Frappe commits successful POST requests before returning HTTP 200. No enqueue
-    # dependency: the receipt is durable even when workers are unavailable.
+    # The receipt is committed first. Queue outages must not lose the receipt.
+    if getattr(settings, 'two_way_enabled', 0) and settings.process_orders:
+        frappe.db.after_commit.add(_wake_processor)
     return {'ok': True, 'received': True, 'duplicate': False, 'mode': 'capture_only'}
 
 
@@ -124,3 +125,15 @@ def provider_status(**kwargs):
 @frappe.whitelist(methods=['POST'])
 def courier_details(**kwargs):
     return _receive('courier_details')
+
+
+def _wake_processor():
+    try:
+        frappe.enqueue('webshop.bolt_integration.processing.process_pending', queue='short')
+    except Exception:
+        frappe.log_error(title='Bolt queue wake-up failed', message='Durable inbox will be retried by the scheduler.')
+
+
+@frappe.whitelist(methods=['POST'])
+def courier_picked_up(**kwargs):
+    return _receive('courier_picked_up')

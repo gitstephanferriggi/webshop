@@ -20,11 +20,12 @@ def fixture(event):
     if event == 'order_update':p.update(main_order_id=123, request_type='order_preparing')
     if event == 'provider_status':p['new_status']='active'
     if event == 'courier_details':p['courier']={'partial_name':'Test'}
+    if event == 'courier_picked_up':p['pickup_ts']=1771592153
     return p
 
 
 class ValidationTests(unittest.TestCase):
-    def test_all_five_events(self):
+    def test_all_events(self):
         for event in EVENTS:
             with self.subTest(event=event):self.assertEqual(validate(event,fixture(event))[0],'store-1')
     def test_invalid_fields(self):

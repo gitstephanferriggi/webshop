@@ -12,4 +12,13 @@ class CallusBoltSettings(Document):
             throw("Enable order processing before enabling submitted sales.")
         if self.sync_catalogue and not all([self.enabled, self.provider_id, self.integrator_id, self.region_id, self.secret_key, self.vat_tag, self.price_list]):
             throw("Complete the Bolt catalogue configuration before enabling synchronisation.")
+        if self.get('two_way_enabled'):
+            import frappe
+            if not all([self.process_orders, self.pos_profile, self.warehouse, self.integrator_id, self.secret_key]):
+                throw("Complete the POS Profile, warehouse and Bolt API credentials before enabling POS operations.")
+            if self.submit_sales:
+                throw("Disable automatic submitted sales when using POS operations; sales are posted at handover.")
+            profile = frappe.get_doc('POS Profile', self.pos_profile)
+            if profile.company != self.company or profile.warehouse != self.warehouse:
+                throw("The Bolt POS Profile must use the configured company and fulfilment warehouse.")
         self.mode = "Sales processing enabled" if self.process_orders else "Capture only"
