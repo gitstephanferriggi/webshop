@@ -130,9 +130,7 @@ def create_sale(link,p,s):
         link.order_type = p.get('order_type')
         link.payment_type = p.get('payment_type')
         link.acceptance_deadline = p.get('max_acceptance_ts') or 0
-        from datetime import datetime, timezone
-        from frappe.utils import convert_utc_to_system_timezone
-        link.due_at = convert_utc_to_system_timezone(datetime.fromtimestamp(p['due_ts'], timezone.utc).replace(tzinfo=None))
+        link.due_at = site_due_at(p['due_ts'])
         link.picking = '{}'
         if link.get('courier_pickup_ts'):
             link.workflow_state = 'Needs attention'
@@ -182,3 +180,11 @@ def run_now():
     frappe.only_for('System Manager')
     process_pending()
     return {'ok':True}
+
+
+def site_due_at(timestamp):
+    """Frappe Datetime columns store site-local wall time without a UTC offset."""
+    from datetime import datetime, timezone
+    from frappe.utils import convert_utc_to_system_timezone
+    utc_time = datetime.fromtimestamp(timestamp, timezone.utc).replace(tzinfo=None)
+    return convert_utc_to_system_timezone(utc_time).replace(tzinfo=None)

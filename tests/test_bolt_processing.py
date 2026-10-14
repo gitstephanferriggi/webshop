@@ -13,6 +13,16 @@ class ProcessingTests(unittest.TestCase):
  def event(self,kind='new_order'):
   import json
   return NS(is_test=0,provider_verified=1,provider_id='P',bolt_order_id='42',event_type=kind,payload=json.dumps({'items':[],'total_order_price':{'value':0,'currency':'EUR'}}),db_set=MagicMock())
+ def test_due_time_is_site_local_without_timezone_for_mariadb(self):
+  from datetime import datetime, timezone
+  from zoneinfo import ZoneInfo
+  converter=sys.modules['frappe.utils'].convert_utc_to_system_timezone
+  converter.side_effect=lambda value:value.replace(tzinfo=timezone.utc).astimezone(ZoneInfo('Europe/Malta'))
+  for month,hour in [(7,14),(12,13)]:
+   utc=datetime(2026,month,14,12,0,tzinfo=timezone.utc)
+   result=self.p.site_due_at(utc.timestamp())
+   self.assertIsNone(result.tzinfo)
+   self.assertEqual(result,datetime(2026,month,14,hour,0))
  def test_disabled_processing_returns_without_work(self):
   self.f.get_single.return_value=NS(enabled=1,process_orders=0)
   self.assertIsNone(self.p.enabled_settings())
