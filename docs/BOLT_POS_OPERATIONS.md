@@ -24,11 +24,25 @@ Acknowledgement is not acceptance. Orders are scoped by provider, environment, s
 ## Flow
 
 New order -> acknowledge -> accept -> pick/scan -> save quantities -> ready -> courier handover.
-Acceptance submits the ERP Sales Order. Handover creates and submits one stock-updating
-Sales Invoice against that order and the configured Bolt customer. This records a receivable
-for later Bolt settlement reconciliation, not a POS cash/payment entry. It does not post Bolt
-commissions, settlement Payment Entries, or customer refunds. Invoice posting errors leave
-handover unconfirmed and the transaction rolls back. Do not release goods before it succeeds.
+Acceptance submits the ERP Sales Order and requires the cashier's own open shift on the configured profile.
+Handover records exactly one fully paid invoice using the dedicated Bolt Food tender and that cashier's
+current open shift. It follows the profile's invoice type: POS Invoice is included in standard closing
+and consolidated to a Sales Invoice there (including stock/GL posting); Sales Invoice mode posts immediately.
+The payment debits a dedicated EUR asset clearing account for later reconciliation of Bolt settlements.
+It is not physical cash, does not trigger a new charge, and does not automatically book commissions or refunds.
+A posted cancellation requires manager return/refund review; it never silently cancels a paid POS invoice.
+Closing is serialized with handover on the opening-shift record. If invoices have changed since the closing
+screen was opened, submission requires a refresh rather than silently omitting the sale.
+
+### Configuration before testing
+
+Create an enabled **Bolt Food** Mode of Payment of type **General**, mapped to a dedicated EUR asset
+clearing ledger for Blooming Garden Ltd. Add it to Siggiewi Shop's payment methods without making it the
+default or the cash mode. Select it in **Callus Bolt Settings → Bolt payment method**. Both backend schema
+changes must be migrated before testing. Do not enable production automatically.
+Cashiers must open their own Siggiewi Shop shift. An order remains assigned to its picker; a manager can
+use the existing takeover flow if another cashier must hand it over. The completing cashier's active shift
+receives the tender, not the webhook account or an arbitrary open shift.
 
 The initial release supports whole-piece EUR baskets, online card payment and Bolt-courier
 delivery. Cash, customer pickup, own delivery and unsupported discounts/fees need review.
@@ -57,7 +71,7 @@ as a review-event count in the workspace and detailed errors in the restricted e
 
 Local: 94 Bolt unit tests; POS queue/alarm tests; TypeScript check and Vite build.
 The local ERP integration test verifies amendment, inclusive VAT, final invoice, stock
-deduction exactly once, no POS tender and repeat handover idempotency. All database writes
+deduction exactly once after closing consolidation, a separate Bolt tender, cashier attribution and repeat handover idempotency. All database writes
 are rolled back. Imported customer Server Scripts (disabled on the local bench) are excluded
 from that process; standard ERP hooks run. Those scripts still require UAT validation.
 Still required before operational use: migrate UAT; real role/profile access tests; two-terminal

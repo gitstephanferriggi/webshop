@@ -37,6 +37,7 @@ doctype_js = {
 }
 
 doc_events = {
+    "POS Closing Shift": {"before_submit": "webshop.bolt_integration.pos_sales.validate_closing"},
     "Website Item": {"validate": "webshop.callus_storefront.product_images.validate_gallery"},
     "Sales Invoice": {
         "before_submit": "webshop.callus_storefront.notifications.mark_website_invoice",

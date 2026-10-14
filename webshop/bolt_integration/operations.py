@@ -61,7 +61,7 @@ def dto(order):
     keys = ('name', 'modified', 'bolt_order_id', 'order_reference', 'workflow_state',
             'acknowledged_by', 'assigned_to', 'source_amount', 'order_type', 'due_at',
             'acceptance_deadline', 'operation', 'operation_state', 'operation_error',
-            'sales_order', 'sales_invoice', 'handover_at', 'courier_pickup_ts', 'attention_from')
+            'sales_order', 'sales_invoice', 'pos_invoice', 'handover_at', 'courier_pickup_ts', 'attention_from')
     result = {k: order.get(k) for k in keys}
     result['picks'] = json.loads(order.picking or '{}')
     return result
@@ -80,6 +80,8 @@ def queue(profile):
         order_by='modified desc', pluck='name', limit_page_length=30)
     reviews = frappe.db.count('Callus Bolt Event', {'provider_id': s.provider_id, 'status': 'Review'})
     return {'store_status': s.get('provider_status') or 'unknown', 'store_action_state': s.get('store_action_state') or '',
+            'store_action': s.get('store_action') or '',
+            'store_action_at': s.get('store_action_at'), 'store_status_at': s.get('provider_status_at'),
             'review_events': reviews, 'recent': [dto(frappe.get_doc('Callus Bolt Order', n)) for n in recent],
             'enabled': True, 'orders': [dto(frappe.get_doc('Callus Bolt Order', n)) for n in names[:200]],
             'overflow': len(names) > 200, 'user': frappe.session.user,
@@ -153,6 +155,8 @@ def act(profile, name, action, version, quantities=None, note=None, replacements
     if action in REMOTE and frappe.db.exists('Callus Bolt Event', {'provider_id': s.provider_id, 'bolt_order_id': order.bolt_order_id, 'event_type': 'cancel_order'}):
         frappe.throw('Bolt has sent a cancellation. Do not change this order.')
     if action == 'accept':
+        from webshop.bolt_integration.pos_sales import context
+        context(s)
         if order.acceptance_deadline and time.time() >= order.acceptance_deadline:
             frappe.throw('The Bolt acceptance deadline has passed. Ask a manager to check Bolt.')
         if order.order_type != 'delivery':
@@ -243,29 +247,48 @@ def act(profile, name, action, version, quantities=None, note=None, replacements
 
 
 def record_sale(order, s):
-    """Post stock and receivable exactly once, without a POS cash payment.
-
-    The configured Bolt customer holds the receivable for settlement reconciliation.
-    Normal ERP costing, stock and tax validation is retained.
-    """
-    if order.sales_invoice:
-        inv = frappe.get_doc('Sales Invoice', order.sales_invoice)
+    """Record the Bolt tender in the cashier's active shift, exactly once."""
+    pos_invoice = getattr(order, 'pos_invoice', None)
+    existing = pos_invoice or order.sales_invoice
+    if existing:
+        inv = frappe.get_doc('POS Invoice' if pos_invoice else 'Sales Invoice', existing)
         if inv.docstatus != 1:
             frappe.throw('The existing invoice needs manager review.')
         return
+    from webshop.bolt_integration.pos_sales import context, as_pos_invoice
+    profile, shift, mode, account = context(s)
     from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
     inv = make_sales_invoice(order.sales_order, ignore_permissions=True)
+    if profile.get('create_pos_invoice_instead_of_sales_invoice'):
+        inv = as_pos_invoice(inv)
+        # The Sales Order mapper calculates SI outstanding before POS payments exist.
+        # POS Invoice validation does not recalculate this Sales-Invoice-only field.
+        inv.outstanding_amount = 0
     inv.flags.ignore_permissions = True
+    inv.is_pos = 1
+    inv.pos_profile = profile.name
+    inv.posa_pos_opening_shift = shift.name
+    inv.owner = frappe.session.user
     inv.update_stock = 1
     inv.set_warehouse = s.warehouse
     inv.disable_rounded_total = 1
+    inv.ignore_pricing_rule = 1
+    inv.set('payments', [{'mode_of_payment': mode, 'account': account,
+                          'amount': float(order.source_amount)}])
     for row in inv.items:
         row.warehouse = s.warehouse
     inv.insert(ignore_permissions=True)
-    if abs(float(inv.grand_total) - float(order.source_amount)) > .01:
-        frappe.throw('Bolt and invoice totals differ. Handover was not recorded.')
+    if (abs(float(inv.grand_total) - float(order.source_amount)) > .01
+            or len(inv.payments) != 1 or inv.payments[0].mode_of_payment != mode
+            or inv.payments[0].account != account
+            or abs(float(inv.paid_amount) - float(inv.grand_total)) > .01
+            or abs(float(inv.change_amount or 0)) > .01):
+        frappe.throw('Bolt invoice total or payment differs. Handover was not recorded.')
     inv.submit()
-    order.sales_invoice = inv.name
+    if inv.doctype == 'POS Invoice':
+        order.pos_invoice = inv.name
+    else:
+        order.sales_invoice = inv.name
     order.status = 'Recorded'
 
 
@@ -376,7 +399,7 @@ def reconcile_adjustment(profile, name):
 def amend_sale(order, s, payload):
     from webshop.bolt_integration.orders import sales_lines, money
     from frappe.utils import nowdate
-    if order.sales_invoice:
+    if order.sales_invoice or getattr(order, 'pos_invoice', None):
         frappe.throw('An invoiced order cannot be adjusted by this workflow.')
     original = frappe.get_doc('Sales Order', order.sales_order)
     if original.docstatus != 1 or original.per_delivered or original.per_billed:

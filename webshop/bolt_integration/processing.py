@@ -158,6 +158,8 @@ def create_sale(link,p,s):
 
 
 def cancel_sale(link):
+    if getattr(link, 'pos_invoice', None):
+        frappe.throw('Bolt POS sale requires manager return/refund review, including any consolidated invoice.')
     if link.sales_invoice:
         inv=frappe.get_doc('Sales Invoice',link.sales_invoice)
         if inv.docstatus==1:

@@ -30,6 +30,7 @@
   "two_way_enabled",
   "pos_profile",
   "warehouse",
+  "payment_method",
   "provider_status",
   "provider_status_at",
   "store_action",
@@ -223,6 +224,13 @@
    "label": "Store request by",
    "fieldtype": "Data",
    "read_only": 1
+  },
+  {
+   "fieldname": "payment_method",
+   "label": "Bolt payment method",
+   "fieldtype": "Link",
+   "options": "Mode of Payment",
+   "description": "Dedicated non-cash tender with a company EUR clearing account. Must also be enabled on the Bolt POS Profile."
   }
  ],
  "permissions": [

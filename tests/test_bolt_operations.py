@@ -15,7 +15,8 @@ class OperationsTests(unittest.TestCase):
         self.patch=patch.dict(sys.modules,modules); self.patch.start()
         sys.modules.pop('webshop.bolt_integration.operations',None)
         self.ops=importlib.import_module('webshop.bolt_integration.operations')
-        self.order=MagicMock(); self.order.modified='v1'; self.order.workflow_state='New'
+        self.pos_context=patch('webshop.bolt_integration.pos_sales.context',return_value=None);self.pos_context.start()
+        self.order=MagicMock(); self.order.pos_invoice=None; self.order.modified='v1'; self.order.workflow_state='New'
         self.order.operation_state=''; self.order.payment_type='card_online'; self.order.order_type='delivery'
         self.order.acceptance_deadline=0; self.order.bolt_order_id='42'; self.order.status='Draft Sale'
         self.order.assigned_to='picker'; self.order.picking='{}'; self.order.order_reference='REF'
@@ -27,6 +28,7 @@ class OperationsTests(unittest.TestCase):
         for p in self.patches:p.start()
     def tearDown(self):
         for p in self.patches:p.stop()
+        self.pos_context.stop();sys.modules.pop('webshop.bolt_integration.pos_sales',None)
         self.patch.stop();sys.modules.pop('webshop.bolt_integration.operations',None)
     def act(self,action,**kw):return self.ops.act('profile','order',action,'v1',**kw)
     def test_guest_denied(self):
