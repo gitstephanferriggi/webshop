@@ -98,3 +98,15 @@ def verify_webhook(payload, signature, secret, now):
         return event
     except (TypeError, KeyError, AttributeError, UnicodeError):
         raise ValueError("Invalid webhook.") from None
+
+
+def normalise_paid_invoice_dates(invoice, posting_date):
+    """Do not inherit overdue order dates when payment arrives on a later day."""
+    from datetime import date
+
+    posting_date = date.fromisoformat(str(posting_date)[:10])
+    invoice.posting_date = posting_date.isoformat()
+    for row in [invoice, *invoice.get("payment_schedule", [])]:
+        due = row.get("due_date")
+        if not due or date.fromisoformat(str(due)[:10]) < posting_date:
+            row["due_date"] = posting_date.isoformat()

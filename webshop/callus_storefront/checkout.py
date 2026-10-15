@@ -18,6 +18,7 @@ from frappe.utils import get_url, nowdate
 
 from webshop.callus_storefront.checkout_validation import (
     cents, checkout_id, fingerprint, normalise_request, validate_session, verify_webhook,
+    normalise_paid_invoice_dates,
 )
 
 PREFIX = "webshop.callus_storefront.checkout."
@@ -342,6 +343,7 @@ def _record_payment(doc, session):
     if not intent or (doc.payment_intent and intent != doc.payment_intent):
         fail("Payment reference mismatch.")
     invoice = make_sales_invoice(order.name, ignore_permissions=True)
+    normalise_paid_invoice_dates(invoice, nowdate())
     invoice.update_stock = 0  # Fulfilment is a separate staff action.
     invoice.insert(ignore_permissions=True)
     if cents(invoice.rounded_total or invoice.grand_total) != doc.amount_minor:

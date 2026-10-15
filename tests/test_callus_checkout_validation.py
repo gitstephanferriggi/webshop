@@ -33,6 +33,22 @@ class PaymentBoundaryTests(unittest.TestCase):
             with self.assertRaises(ValueError):validate_session(session|change,doc)
         self.assertFalse(validate_session(session|{'payment_status':'unpaid'},doc))
 
+    def test_paid_invoice_after_midnight_moves_only_stale_due_dates(self):
+        from webshop.callus_storefront.checkout_validation import normalise_paid_invoice_dates
+        class Invoice(dict):
+            __setattr__ = dict.__setitem__
+        invoice = Invoice(due_date="2026-10-14", payment_schedule=[
+            {"due_date": "2026-10-14", "payment_amount": 66.99},
+            {"due_date": "2026-10-20", "payment_amount": 10},
+        ])
+        normalise_paid_invoice_dates(invoice, "2026-10-15")
+        self.assertEqual(invoice["posting_date"], "2026-10-15")
+        self.assertEqual(invoice["due_date"], "2026-10-15")
+        self.assertEqual(invoice["payment_schedule"][0], {"due_date": "2026-10-15", "payment_amount": 66.99})
+        self.assertEqual(invoice["payment_schedule"][1]["due_date"], "2026-10-20")
+        normalise_paid_invoice_dates(invoice, "2026-10-15")
+        self.assertEqual(invoice["due_date"], "2026-10-15")
+
     def test_webhook_hmac_requires_exact_payload_and_recent_timestamp(self):
         import hmac,hashlib
         from webshop.callus_storefront.checkout_validation import verify_webhook
