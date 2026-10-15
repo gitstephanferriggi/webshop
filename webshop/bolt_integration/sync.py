@@ -26,7 +26,8 @@ def snapshot(s):
             continue
         candidates[p.item_code].append(p.price_list_rate)
     prices={k:v[0] for k,v in candidates.items() if len(v)==1}
-    result=build(items,web,prices,bins,s.provider_id,get_url())
+    markup = s.get("price_markup_percent")
+    result=build(items,web,prices,bins,s.provider_id,get_url(),price_markup_percent=20 if markup is None else markup)
     for product in result['products']:
         product['vat_tag']=s.vat_tag
     return result

@@ -4,6 +4,11 @@ from frappe.model.document import Document
 class CallusBoltSettings(Document):
     def validate(self):
         from frappe import throw
+        from webshop.bolt_integration.pricing import markup_percentage
+        try:
+            markup_percentage(self.get('price_markup_percent') if self.get('price_markup_percent') is not None else 20)
+        except ValueError as exc:
+            throw(str(exc))
         if self.enabled and (not self.site_hostname or self.environment not in ("Staging", "Production")):
             throw("Set the site hostname and environment before enabling Bolt receipt.")
         if self.process_orders and not all([self.enabled, self.provider_id, self.company, self.customer, self.price_list, self.taxes_and_charges]):

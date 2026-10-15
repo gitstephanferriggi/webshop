@@ -1,5 +1,6 @@
 """Pure Bolt catalogue mapping. Website publication never gates Bolt selection."""
 from decimal import Decimal, ROUND_FLOOR
+from webshop.bolt_integration.pricing import selling_price, markup_percentage
 import hashlib
 import re
 from urllib.parse import urljoin, urlparse
@@ -16,12 +17,13 @@ def available_stock(actual, reserved):
     return min(10000, int(value.to_integral_value(rounding=ROUND_FLOOR)))
 
 
-def build(items, website_items, prices, bins, provider_id, asset_base):
+def build(items, website_items, prices, bins, provider_id, asset_base, price_markup_percent=0):
     """Return a provider-scoped catalogue plus reasons for excluded opt-ins.
 
     Caller supplies current, unambiguous prices in the agreed gross EUR price list.
     Quantities are whole pieces only. Excluded opt-ins must be withdrawn by sync.
     """
+    markup_percentage(price_markup_percent)
     products, price_rows, stocks, excluded = [], [], [], []
     groups = set()
     for web in website_items:
@@ -51,7 +53,7 @@ def build(items, website_items, prices, bins, provider_id, asset_base):
             if urlparse(image).scheme == 'https':
                 product['image_url'] = image
         products.append(product)
-        price_rows.append({'sku': code, 'base_selling_price': float(Decimal(str(price)))})
+        price_rows.append({'sku': code, 'base_selling_price': selling_price(price, price_markup_percent)})
         stock = bins.get(code, {})
         stocks.append({'sku': code, 'quantity': available_stock(stock.get('actual_qty'), stock.get('reserved_qty')), 'selling_unit': 'piece'})
     categories = [{'external_id': 'callus-products', 'name': {'en-US': 'Callus Garden Centre'},

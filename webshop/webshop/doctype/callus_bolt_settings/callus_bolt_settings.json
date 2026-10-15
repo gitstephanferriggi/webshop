@@ -15,6 +15,7 @@
   "company",
   "customer",
   "price_list",
+  "price_markup_percent",
   "taxes_and_charges",
   "sync_catalogue",
   "integrator_id",
@@ -231,6 +232,13 @@
    "fieldtype": "Link",
    "options": "Mode of Payment",
    "description": "Dedicated non-cash tender with a company EUR clearing account. Must also be enabled on the Bolt POS Profile."
+  },
+  {
+   "fieldname": "price_markup_percent",
+   "fieldtype": "Float",
+   "label": "Bolt Price Markup (%)",
+   "default": "20",
+   "description": "Applied once to the configured gross EUR price list when publishing to Bolt. Imported orders retain the prices charged by Bolt; website and POS prices are unchanged."
   }
  ],
  "permissions": [

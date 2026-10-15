@@ -105,3 +105,18 @@ not an administrator's API token. `health` is GET. Existing route confinement, p
 host checks and durable duplicate handling apply to the new pickup callback as well.
 
 Suggested Webshop commit: `feat(bolt): add POS operations, adjusted picking and courier webhooks`
+
+### Bolt selling price markup
+
+`Callus Bolt Settings → Bolt Price Markup (%)` defaults to 20. Catalogue snapshots
+apply this once to the configured gross EUR Item Price and round half-up to two
+decimal places. The source Item Price, website and normal POS prices are unchanged.
+Zero explicitly disables the markup; negative or non-finite values are rejected.
+Replacement choices use the same catalogue snapshot and therefore the same markup.
+Incoming orders, adjustments and invoices retain Bolt's verified charged prices;
+never apply the percentage again when importing a sale.
+
+After migration, verify the percentage in UAT and run a fresh catalogue/price sync.
+An already-running sync retains its saved snapshot until the next sync cycle.
+Existing orders retain their original price. Production integration remains disabled
+until separately enabled; deploying code alone does not publish new prices there.
