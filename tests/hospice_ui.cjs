@@ -9,7 +9,7 @@ const assert = require('assert');
  const context=await browser.newContext({viewport:{width:1280,height:900}});
  let prepared=0, cancelled=0, lastBuyer;
  const items=[{id:'TEST-PLANT',name:'Poinsettia Rossa P14 cm',price:8.5,available:true},{id:'TEST-SAUCER',name:'Saucer Medea 12 cm Terracotta',price:1.5,available:true}];
- const summary={items:[{id:'TEST-PLANT',name:items[0].name,qty:2}],total:22,delivery_fee:5};
+ const summary={items:[{id:'TEST-PLANT',name:items[0].name,qty:2,amount:17}],total:22,delivery_fee:5,fulfilment:'delivery'};
  const errors=[];
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await context.route('**/*',async route=>{
@@ -17,7 +17,7 @@ const assert = require('assert');
   if(url.pathname.startsWith('/api/')) {
    const method=url.pathname.split('.').pop();const payload=route.request().postDataJSON();let result;
    if(method==='catalogue') result={items,is_live:false};
-   else if(method==='prepare'){prepared++;lastBuyer=payload.buyer;assert.deepEqual(payload.items,[{id:'TEST-PLANT',qty:2}]);result={status:'Draft',summary};}
+   else if(method==='prepare'){prepared++;lastBuyer=payload.buyer;assert.deepEqual(payload.items,[{id:'TEST-PLANT',qty:2}]);result={status:'Draft',summary:{...summary,fulfilment:payload.buyer.delivery,...(payload.buyer.delivery==='collection'?{total:17,delivery_fee:0}:{})}};}
    else if(method==='cancel'){cancelled++;result={status:'Expired'};}
    else if(method==='track') result={order:'TEST-ORDER',progress:{delivery_state:'Preparing'},items:summary.items};
    else throw new Error('Unexpected API '+method);
@@ -37,6 +37,21 @@ const assert = require('assert');
  assert.equal(prepared,1);assert.equal(lastBuyer.company,'Example Ltd');assert.equal(lastBuyer.delivery,'delivery');
  assert((await page.locator('#summary').innerText()).includes('€22.00'));
  await page.locator('#edit').click();await page.locator('#order-form').waitFor({state:'visible'});assert.equal(cancelled,1);
+ await page.locator('#fulfilment').selectOption('collection');
+ assert(await page.locator('#delivery-fields').isHidden());
+ await page.screenshot({path:process.env.HOSPICE_PREVIEW+'/pickup.png',fullPage:true});
+ for(const field of ['address','town','postcode']) {
+  assert(await page.locator(`[name="${field}"]`).isDisabled());
+ }
+ await page.locator('#review').click();await page.locator('#summary').waitFor({state:'visible'});
+ assert.equal(lastBuyer.delivery,'collection');assert.equal(lastBuyer.address,undefined);
+ assert((await page.locator('#summary').innerText()).includes('€17.00'));
+ assert((await page.locator('#summary').innerText()).includes('Pickup from Callus'));
+ await page.screenshot({path:process.env.HOSPICE_PREVIEW+'/pickup-review.png',fullPage:true});
+ await page.locator('#edit').click();await page.locator('#order-form').waitFor({state:'visible'});
+ await page.locator('#fulfilment').selectOption('delivery');
+ assert(await page.locator('#delivery-fields').isVisible());
+ assert(await page.locator('[name="address"]').evaluate(el=>el.required&&!el.disabled));
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
  await page.screenshot({path:process.env.HOSPICE_PREVIEW+'/mobile.png',fullPage:true});

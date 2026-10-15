@@ -32,14 +32,24 @@ override_doctype_class = {
 }
 
 doctype_js = {
+    "Sales Order": "public/js/hospice_sales_order.js",
     "Item": "public/js/override/item.js",
     "Homepage": "public/js/override/homepage.js",
 }
 
 doc_events = {
+    "Sales Order": {
+        "validate": "webshop.callus_storefront.hospice_fulfilment.validate_preparation",
+        "before_update_after_submit": "webshop.callus_storefront.hospice_fulfilment.validate_preparation",
+        "on_update": "webshop.callus_storefront.hospice_fulfilment.on_order_change",
+        "on_update_after_submit": "webshop.callus_storefront.hospice_fulfilment.on_order_change",
+        "on_cancel": "webshop.callus_storefront.hospice_fulfilment.on_order_change",
+    },
+    "Callus Checkout": {"on_update": "webshop.callus_storefront.hospice_fulfilment.on_checkout_change"},
     "POS Closing Shift": {"before_submit": "webshop.bolt_integration.pos_sales.validate_closing"},
     "Website Item": {"validate": "webshop.callus_storefront.product_images.validate_gallery"},
     "Sales Invoice": {
+        "validate": "webshop.callus_storefront.hospice_fulfilment.clear_linked_pickup_address",
         "before_submit": "webshop.callus_storefront.notifications.mark_website_invoice",
     },
     "Item": {
@@ -75,6 +85,14 @@ doc_events = {
         ],
     },
 }
+
+# Linked document changes refresh the public and desk progress from the same facts.
+for _doctype in ("Pick List", "Delivery Note", "Delivery Trip", "Delivery Execution"):
+    doc_events[_doctype] = {
+        event: "webshop.callus_storefront.hospice_fulfilment.on_fulfilment_change"
+        for event in ("on_update", "on_submit", "on_update_after_submit", "on_cancel", "after_delete")
+    }
+doc_events["Delivery Note"]["validate"] = "webshop.callus_storefront.hospice_fulfilment.clear_linked_pickup_address"
 
 has_website_permission = {
     "Website Item": "webshop.webshop.doctype.website_item.website_item.has_website_permission_for_website_item",

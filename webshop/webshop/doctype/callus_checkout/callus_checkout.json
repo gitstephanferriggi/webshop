@@ -31,7 +31,8 @@
   "tracking_hash",
   "tracking_expires_at",
   "tracking_revoked",
-  "campaign_notified"
+  "campaign_notified",
+  "pickup_ready_notified"
  ],
  "fields": [
   {
@@ -184,6 +185,13 @@
    "fieldname": "campaign_notified",
    "fieldtype": "Check",
    "label": "Campaign Emails Queued",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pickup_ready_notified",
+   "label": "Pickup Ready Email Queued",
+   "fieldtype": "Check",
+   "default": "0",
    "read_only": 1
   }
  ],

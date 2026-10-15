@@ -19,7 +19,9 @@
   "hospice_customer",
   "hospice_warehouse",
   "hospice_items",
-  "hospice_test_email"
+  "hospice_test_email",
+  "hospice_delivery_item",
+  "hospice_free_delivery_from"
  ],
  "fields": [
   {
@@ -106,6 +108,22 @@
    "label": "Hospice Test Email",
    "options": "Email",
    "description": "Required in Stripe test mode. Routes both emails to this address."
+  },
+  {
+   "fieldname": "hospice_delivery_item",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Hospice Delivery Item",
+   "default": "ITE-2025-016885",
+   "description": "Non-stock service item. Its price includes VAT; charged only for delivery below the free-delivery threshold."
+  },
+  {
+   "fieldname": "hospice_free_delivery_from",
+   "fieldtype": "Currency",
+   "options": "EUR",
+   "label": "Hospice Free Delivery From",
+   "default": "35",
+   "description": "Product subtotal including VAT. Delivery is free at or above this amount."
   }
  ],
  "permissions": [

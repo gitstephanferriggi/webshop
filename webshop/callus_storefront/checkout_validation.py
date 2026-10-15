@@ -11,7 +11,7 @@ def checkout_id(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def normalise_request(items, buyer):
+def normalise_request(items, buyer, contact_only_collection=False):
     if not isinstance(items, list) or not 1 <= len(items) <= 30:
         raise ValueError("Choose between 1 and 30 different products.")
     result = []
@@ -28,10 +28,14 @@ def normalise_request(items, buyer):
         result.append({"id": code, "qty": qty})
     if not isinstance(buyer, dict):
         raise ValueError("Enter your contact details.")
+    pickup = contact_only_collection and buyer.get("delivery") == "collection"
     clean = {}
     for field, maximum in {"first_name":80,"last_name":80,"email":140,"phone":25,
                            "address":140,"town":80,"postcode":12}.items():
         value = buyer.get(field)
+        if pickup and field in ("address", "town", "postcode"):
+            clean[field] = ""
+            continue
         if not isinstance(value, str) or not value.strip() or len(value) > maximum or any(ord(c)<32 for c in value):
             raise ValueError("Please check your " + field.replace("_", " ") + ".")
         clean[field] = value.strip()

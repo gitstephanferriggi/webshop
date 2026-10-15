@@ -183,17 +183,19 @@ def _new_order(doc, items, buyer, shop, settings):
             "customer_type":"Individual","customer_group":shop.default_customer_group,
             "territory":get_root_of("Territory")}).insert(ignore_permissions=True, set_name="WEB-" + doc.name[:20])
     # Never attach an anonymous checkout to a customer/account based only on email.
-    address = frappe.get_doc({"doctype":"Address","address_title":name,"address_type":"Shipping" if doc.get("campaign") else "Billing",
-        "address_line1":buyer["address"],"city":buyer["town"],"pincode":buyer["postcode"],
-        "country":"Malta","email_id":buyer["email"],"phone":buyer["phone"],
-        "links":[{"link_doctype":"Customer","link_name":customer.name}]}).insert(ignore_permissions=True)
+    address = None
+    if not (doc.get("campaign") == "hospice" and buyer["delivery"] == "collection"):
+        address = frappe.get_doc({"doctype":"Address","address_title":name,"address_type":"Shipping" if doc.get("campaign") else "Billing",
+            "address_line1":buyer["address"],"city":buyer["town"],"pincode":buyer["postcode"],
+            "country":"Malta","email_id":buyer["email"],"phone":buyer["phone"],
+            "links":[{"link_doctype":"Customer","link_name":customer.name}]}).insert(ignore_permissions=True)
     contact = frappe.get_doc({"doctype":"Contact","first_name":buyer["first_name"],"last_name":buyer["last_name"],
         "email_ids":[{"email_id":buyer["email"],"is_primary":1}],
         "phone_nos":[{"phone":buyer["phone"],"is_primary_mobile_no":1}],
         "links":[{"link_doctype":"Customer","link_name":customer.name}]}).insert(ignore_permissions=True)
     order = frappe.get_doc({"doctype":"Sales Order","company":shop.company,"customer":customer.name,
         "order_type":"Sales","transaction_date":nowdate(),"delivery_date":nowdate(),
-        "selling_price_list":shop.price_list,"currency":"EUR","customer_address":address.name,
+        "selling_price_list":shop.price_list,"currency":"EUR","customer_address":address.name if address else None,
         "shipping_address_name":address.name if buyer["delivery"] == "delivery" else None,
         "contact_person":contact.name,"contact_email":buyer["email"],"contact_mobile":buyer["phone"],
         "items":_stock(items, campaign=doc.get("campaign")),"remarks":"Website " + buyer["delivery"] + "; checkout " + doc.name[:12]})
@@ -202,13 +204,20 @@ def _new_order(doc, items, buyer, shop, settings):
         decorate_order(order, buyer)
     order.flags.ignore_permissions = True
     order.run_method("set_missing_values")
+    if doc.get("campaign") == "hospice":
+        from webshop.callus_storefront.hospice_fulfilment import clear_pickup_address
+        clear_pickup_address(order)
     order.taxes_and_charges = set_taxes(customer.name, "Customer", nowdate(), shop.company,
         customer_group=customer.customer_group, tax_category=order.tax_category,
-        billing_address=address.name, shipping_address=order.shipping_address_name, use_for_shopping_cart=1)
+        billing_address=address.name if address else None, shipping_address=order.shipping_address_name, use_for_shopping_cart=1)
     order.set("taxes", [])
     order.append_taxes_from_master()
     order.append_taxes_from_item_tax_template()
-    if buyer["delivery"] == "delivery":
+    hospice_delivery_item = None
+    if doc.get("campaign") == "hospice":
+        from webshop.callus_storefront.hospice import price_order
+        hospice_delivery_item = price_order(order, buyer, shop, settings)
+    elif buyer["delivery"] == "delivery":
         if not settings.delivery_rule:
             fail("Delivery is not available online yet. Please choose collection.")
         order.shipping_rule = settings.delivery_rule
@@ -222,6 +231,8 @@ def _new_order(doc, items, buyer, shop, settings):
         fail("This order is outside the online payment limit. Please contact the shop.")
     doc.customer, doc.sales_order, doc.amount_minor = customer.name, order.name, amount
     delivery_fee = 0
+    if hospice_delivery_item:
+        delivery_fee = sum(row.amount for row in order.items if row.item_code == hospice_delivery_item)
     if order.shipping_rule:
         rule = frappe.get_cached_doc("Shipping Rule", order.shipping_rule)
         delivery_fee = sum(row.tax_amount for row in order.taxes
@@ -229,7 +240,8 @@ def _new_order(doc, items, buyer, shop, settings):
     doc.summary = json.dumps({"currency":"EUR","total":amount/100,"delivery_fee":delivery_fee,
         "net_total":order.net_total,"taxes_and_charges":order.total_taxes_and_charges,
         "fulfilment":buyer["delivery"],
-        "items":[{"id":x.item_code,"name":x.item_name,"qty":x.qty,"amount":x.amount} for x in order.items]})
+        "items":[{"id":x.item_code,"name":x.item_name,"qty":x.qty,"amount":x.amount}
+                 for x in order.items if x.item_code != hospice_delivery_item]})
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -242,7 +254,8 @@ def _prepare(token, items, buyer, campaign=None):
     try:
         name = checkout_id(token)
         raw_buyer = frappe.parse_json(buyer)
-        items, buyer = normalise_request(frappe.parse_json(items), raw_buyer)
+        items, buyer = normalise_request(frappe.parse_json(items), raw_buyer,
+                                         contact_only_collection=campaign == "hospice")
         if campaign == "hospice":
             from webshop.callus_storefront.hospice import clean_buyer
             buyer = clean_buyer(buyer, raw_buyer)
@@ -257,7 +270,7 @@ def _prepare(token, items, buyer, campaign=None):
             return _public(doc)
         settings = _settings()
         shop, account, live = _gateway(settings)
-        if buyer["delivery"] == "delivery" and not settings.delivery_rule:
+        if campaign != "hospice" and buyer["delivery"] == "delivery" and not settings.delivery_rule:
             fail("Please choose collection; delivery is not configured yet.")
         doc = frappe.get_doc({"doctype":"Callus Checkout","status":"Draft","request_hash":digest,"campaign":campaign,
             "buyer":json.dumps(buyer),"basket":json.dumps(items),"expires_at":int(time.time())+1800,

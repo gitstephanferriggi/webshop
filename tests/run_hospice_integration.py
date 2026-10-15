@@ -18,6 +18,7 @@ if frappe.conf.db_port != 13316:
     raise SystemExit('Use the isolated checkout database on port 13316.')
 frappe.set_user('Administrator')
 frappe.flags.in_test = True
+frappe.clear_cache()
 from hospice_integration import HospiceIntegrationTests
 try:
     result = unittest.TextTestRunner(verbosity=2).run(

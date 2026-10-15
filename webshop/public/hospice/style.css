@@ -8,3 +8,6 @@
 .product input{width:100px;min-height:44px;text-align:center}
 .product input:disabled{background:#f3f4ef;border-color:#dce1d6;color:#7a8479;cursor:not-allowed;opacity:1}
 .product>label:has(input:disabled){color:#737c70}
+[hidden]{display:none!important}
+select{font:inherit;color:inherit;border:1px solid #bdc9bc;border-radius:6px;padding:12px;width:100%;background:white}
+#delivery-fields{margin-top:18px}

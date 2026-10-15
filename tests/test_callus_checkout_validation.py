@@ -17,6 +17,15 @@ class PaymentBoundaryTests(unittest.TestCase):
     def test_address_and_country_are_required(self):
         for override in [{'country':'Italy'},{'address':''},{'email':'bad'},{'delivery':'free'},{'first_name':'Bad\nName'}]:
             with self.assertRaises(ValueError):normalise_request([{'id':'A','qty':1}],self.buyer|override)
+
+    def test_hospice_pickup_accepts_contact_only_and_discards_old_address(self):
+        for address in ('', 'A previous delivery address'):
+            _, buyer=normalise_request([{'id':'A','qty':1}],self.buyer|{'address':address},
+                                       contact_only_collection=True)
+            self.assertEqual([buyer[k] for k in ('address','town','postcode')],['','',''])
+        with self.assertRaises(ValueError):
+            normalise_request([{'id':'A','qty':1}],self.buyer|{'delivery':'delivery','address':''},
+                              contact_only_collection=True)
     def test_capability_is_hashed_and_strict(self):
         self.assertNotEqual(checkout_id('a'*64),'a'*64)
         for token in [None,'a'*63,'../etc/passwd','G'*64]:

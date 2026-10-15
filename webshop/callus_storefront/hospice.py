@@ -19,8 +19,6 @@ CUSTOMER_NAME = "Cash Sales - Hospice Malta"
 
 
 def clean_buyer(buyer, raw):
-    if buyer["delivery"] != "delivery":
-        raise ValueError("Hospice orders are delivered to your address.")
     for key, maximum in (("company", 140), ("company_vat", 40), ("instructions", 500)):
         value = raw.get(key, "")
         if not isinstance(value, str) or len(value) > maximum or any(ord(c) < 32 for c in value):
@@ -33,7 +31,7 @@ def campaign_settings():
     settings = checkout._settings()
     if not settings.get("hospice_enabled"):
         frappe.throw("Hospice ordering is not available yet.")
-    if not settings.hospice_customer or not settings.hospice_items or not settings.delivery_rule:
+    if not settings.hospice_customer or not settings.hospice_items:
         frappe.throw("Hospice ordering needs configuration. Please contact Callus.")
     customer = frappe.get_doc("Customer", settings.hospice_customer)
     if customer.disabled or customer.customer_name != CUSTOMER_NAME:
@@ -58,6 +56,8 @@ def decorate_order(order, buyer):
     order.custom_hospice_buyer_vat = buyer.get("company_vat", "")
     order.custom_hospice_instructions = buyer.get("instructions", "")
     order.custom_hospice_preparation = "Awaiting preparation"
+    order.custom_hospice_fulfilment = "Pickup" if buyer["delivery"] == "collection" else "Delivery"
+    order.custom_hospice_status = "Awaiting payment"
     date = getdate(nowdate())
     holiday_list = frappe.db.get_value("Company", order.company, "default_holiday_list")
     holidays = {getdate(row) for row in frappe.get_all("Holiday", filters={"parent":holiday_list}, pluck="holiday_date")} if holiday_list else set()
@@ -69,6 +69,46 @@ def decorate_order(order, buyer):
     order.delivery_date = date
     for row in order.items:
         row.delivery_date = date
+
+
+def delivery_item(settings):
+    return settings.get("hospice_delivery_item") or "ITE-2025-016885"
+
+
+def price_order(order, buyer, shop, settings):
+    """Hospice shelf prices include VAT; delivery is a taxable service item."""
+    code = delivery_item(settings)
+    if any(row.item_code == code for row in order.items):
+        frappe.throw("The delivery service cannot be selected as a Hospice product.")
+    for tax in order.taxes:
+        if tax.charge_type != "On Net Total":
+            frappe.throw("Hospice checkout needs a tax template with item VAT only.")
+        tax.included_in_print_rate = 1
+    order.run_method("calculate_taxes_and_totals")
+    threshold = settings.get("hospice_free_delivery_from")
+    threshold = float(35 if threshold is None else threshold)
+    if threshold <= 0:
+        frappe.throw("Set a positive Hospice free-delivery threshold.")
+    # Compare rounded gross prices, rather than ERPNext's VAT-exclusive net total.
+    gross = round(sum(row.amount for row in order.items), 2)
+    if buyer["delivery"] != "delivery" or gross >= threshold:
+        return None
+    from erpnext.stock.get_item_details import get_price_list_rate_for
+    item = frappe.get_cached_doc("Item", code)
+    if item.disabled or not item.is_sales_item or item.is_stock_item or item.has_variants:
+        frappe.throw("The Hospice delivery item must be an enabled non-stock sales item.")
+    rate = get_price_list_rate_for(frappe._dict(price_list=shop.price_list,
+        customer=order.customer, uom=item.stock_uom, stock_uom=item.stock_uom,
+        qty=1, transaction_date=nowdate()), code)
+    if not rate or rate <= 0:
+        frappe.throw("Set the Hospice delivery item's VAT-inclusive price.")
+    order.append("items", dict(item_code=code, qty=1, uom=item.stock_uom,
+        conversion_factor=1, rate=rate, price_list_rate=rate, delivery_date=order.delivery_date))
+    order.run_method("set_missing_item_details")
+    order.append_taxes_from_item_tax_template()
+    for tax in order.taxes:
+        tax.included_in_print_rate = 1
+    return code
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -101,7 +141,8 @@ def catalogue():
             image = ""
         result.append(dict(id=item.name, name=item.item_name, image=image,
             price=float(rate or 0), available=bool(rate and (not item.is_stock_item or available > 0))))
-    return dict(items=result, donation=DONATION, delivery="3–5 working days", is_live=live)
+    return dict(items=result, donation=DONATION, delivery="3–5 working days", is_live=live,
+                prices_include_vat=True, free_delivery_from=settings.get("hospice_free_delivery_from") or 35)
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -116,17 +157,16 @@ def track(token):
     doc = frappe.get_doc("Callus Checkout", name) if name else None
     if not doc or doc.tracking_revoked or doc.tracking_expires_at < time.time() or doc.status not in ("Paid","Refund Pending","Refunded"):
         frappe.throw("This tracking link is unavailable. Please contact Callus.", frappe.PermissionError)
-    from bloominggarden.bloominggarden.customer_ordering.progress import order_progress
+    from webshop.callus_storefront.hospice_fulfilment import progress_for
     order = frappe.get_doc("Sales Order", doc.sales_order)
-    progress = order_progress(order)
-    if progress["delivery_state"] == "Awaiting planning":
-        progress["delivery_state"] = order.get("custom_hospice_preparation") or "Awaiting preparation"
+    progress = progress_for(order, doc)
     if doc.status == "Refunded":
         progress["delivery_state"] = "Refunded"
     elif doc.status == "Refund Pending":
         progress["delivery_state"] = "Refund in progress"
     # No names, email, telephone, address, invoice, driver or POD attachments.
     return dict(order=doc.sales_order, payment=doc.status, progress=progress,
+        fulfilment=json.loads(doc.buyer)["delivery"],
         items=json.loads(doc.summary)["items"], delivery="3–5 working days")
 
 
@@ -175,6 +215,8 @@ def queue_emails(name):
 
 
 def queue_pending_emails():
+    from webshop.callus_storefront.hospice_fulfilment import reconcile
+    reconcile()
     for name in frappe.get_all("Callus Checkout", filters={"campaign":"hospice","status":"Paid","campaign_notified":0}, pluck="name", limit_page_length=100):
         try:
             queue_emails(name)
@@ -255,9 +297,16 @@ def setup():
     from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
     create_custom_fields({"Sales Order": [
         dict(fieldname="custom_hospice_order", label="Hospice Campaign Order", fieldtype="Check", read_only=1, insert_after="customer"),
-        dict(fieldname="custom_hospice_preparation", label="Hospice Preparation", fieldtype="Select",
-             options="Awaiting preparation\nPreparing\nReady for dispatch", allow_on_submit=1,
+        dict(fieldname="custom_hospice_fulfilment", label="Hospice Fulfilment", fieldtype="Select",
+             options="Delivery\nPickup", read_only=1, allow_on_submit=1, in_list_view=1,
              depends_on="eval:doc.custom_hospice_order", insert_after="custom_hospice_order"),
+        dict(fieldname="custom_hospice_status", label="Hospice Order Progress", fieldtype="Data",
+             read_only=1, allow_on_submit=1, in_list_view=1,
+             depends_on="eval:doc.custom_hospice_order", insert_after="custom_hospice_fulfilment"),
+        dict(fieldname="custom_hospice_preparation", label="Manual Preparation Step", fieldtype="Select",
+             options="Awaiting preparation\nPreparing\nReady for dispatch\nReady for pickup\nCollected", allow_on_submit=1,
+             description="Order progress advances automatically from picking, dispatch and proof of delivery. Use this field for manual shop preparation.",
+             depends_on="eval:doc.custom_hospice_order", insert_after="custom_hospice_status"),
         dict(fieldname="custom_hospice_buyer_company", label="Hospice Buyer Company", fieldtype="Data", read_only=1,
              depends_on="eval:doc.custom_hospice_order", insert_after="custom_hospice_preparation"),
         dict(fieldname="custom_hospice_buyer_vat", label="Hospice Buyer VAT Number", fieldtype="Data", read_only=1,

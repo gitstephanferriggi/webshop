@@ -1,0 +1,9 @@
+<div style="font:16px Arial,sans-serif;color:#24392e;max-width:620px;margin:auto;padding:28px">
+<h1>Your order is ready for pickup.</h1>
+<p>Hello {{ buyer.first_name | e }},</p>
+<p>Your Hospice order <strong>{{ order | e }}</strong> is ready to collect from <strong>Callus Garden Centre</strong>.</p>
+<ul>{% for item in items %}<li>{{ item.qty }} × {{ item.name | e }}</li>{% endfor %}</ul>
+<p>Please bring your order number when you collect. Your order is already paid.</p>
+<p>Thank you for supporting Hospice Malta.</p>
+<p>For collection arrangements, contact <a href="mailto:info@callusgardencentre.com">info@callusgardencentre.com</a><br>+356 2146 2229 · +356 9911 9529</p>
+</div>
