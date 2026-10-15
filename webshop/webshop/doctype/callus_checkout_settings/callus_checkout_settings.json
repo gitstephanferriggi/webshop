@@ -112,7 +112,7 @@
   {
    "role": "System Manager",
    "read": 1,
-   "write": 0,
+   "write": 1,
    "create": 0,
    "report": 1
   }
