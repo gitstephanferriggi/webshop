@@ -70,8 +70,8 @@ def step(s):
         data['removed']=sorted(set(previous)-set(current))
         if data['excluded']:
             frappe.throw('Selected products need mapping review: '+json.dumps(data['excluded'])[:700])
-        data['catalogue_hash']=hashlib.sha256(json.dumps({'products':data['products'],'categories':data['categories']},sort_keys=True,separators=(',',':')).encode()).hexdigest()
-        # An unchanged catalogue only needs price and quantity refreshes.
+        data['catalogue_hash']=hashlib.sha256(json.dumps({'products':data['products'],'categories':data['categories'],'prices':data['prices']},sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        # Changed prices require menu publication too; stock-only changes use the fast path.
         if not data['removed'] and data['catalogue_hash']==s.last_catalogue_hash:
             if data['prices']:
                 call('/pim/v1/products/prices/import',dict(region,provider_ids=[s.provider_id],price_list={'currency':'EUR','skus':data['prices']}))
