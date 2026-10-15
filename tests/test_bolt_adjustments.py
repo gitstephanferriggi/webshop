@@ -32,6 +32,15 @@ class AdjustmentTests(unittest.TestCase):
   for key,value in [('order_id',43),('total_price',11)]:
    p=self.basket();p[key]=value
    with self.assertRaises(ValueError):confirmed_basket(p,42,{'A':{'qty':2,'rate':5}},25)
+ def test_actual_bolt_money_object_and_null_piece_quantity(self):
+  p=self.basket();p['total_price']={'value':10,'currency':'eur'};p['items'][0]['picked_amount']=None
+  self.assertEqual(confirmed_basket(p,42,{'A':{'qty':2,'rate':5}},25)['items'][0]['qty'],2)
+  p['total_price']['currency']='usd'
+  with self.assertRaises(ValueError):confirmed_basket(p,42,{'A':{'qty':2,'rate':5}},25)
+ def test_null_quantity_does_not_bypass_expected_basket(self):
+  for rate,amount in [(5,11),(0,0),(5,15)]:
+   p=self.basket();p['items'][0].update(picked_amount=None,price=rate,total_price=amount)
+   with self.assertRaises(ValueError):confirmed_basket(p,42,{'A':{'qty':2,'rate':5}},25)
  def test_no_increased_charge(self):
   with self.assertRaises(ValueError):confirmed_basket(self.basket(),42,{'A':{'qty':2,'rate':5}},9)
  def test_duplicate_lines_blocked(self):

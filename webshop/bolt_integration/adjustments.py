@@ -54,11 +54,27 @@ def build_adjustment(lines, quantities, replacements, catalogue):
 def confirmed_basket(basket, order_id, expected, original_total):
     if not isinstance(basket, dict) or numeric_order_id(basket.get('order_id')) != numeric_order_id(order_id):
         raise ValueError('Bolt returned a different order.')
+    basket_total = basket.get('total_price')
+    if isinstance(basket_total, dict):
+        if str(basket_total.get('currency', '')).upper() != 'EUR':
+            raise ValueError('Bolt final basket currency must be EUR.')
+        basket_total = basket_total.get('value')
     rows, seen, total = [], set(), Decimal('0')
     for item in basket.get('items', []):
         code = item.get('sku')
-        qty, rate = money(item.get('picked_amount')), money(item.get('price'))
+        rate = money(item.get('price'))
         amount = money(item.get('total_price'))
+        picked = item.get('picked_amount')
+        if picked is None:
+            # Bolt can omit picked_amount for pieces. Infer only when its
+            # unit price and line total prove an exact whole-piece quantity.
+            if item.get('selling_unit') != 'piece' or rate <= 0:
+                raise ValueError('Bolt quantity cannot be verified.')
+            qty = amount / rate
+            if qty != qty.to_integral_value():
+                raise ValueError('Bolt quantity is not a whole number.')
+        else:
+            qty = money(picked)
         if qty == 0:
             if amount != 0:
                 raise ValueError('A removed item still has a charge.')
@@ -72,6 +88,6 @@ def confirmed_basket(basket, order_id, expected, original_total):
         rows.append({'sku': code, 'qty': int(qty), 'unit_item_price': {'value': float(rate), 'currency': 'EUR'},
                      'total_item_price': {'value': float(amount), 'currency': 'EUR'}})
         seen.add(code); total += amount
-    if seen != set(expected) or not rows or total != money(basket.get('total_price')) or total > money(original_total):
+    if seen != set(expected) or not rows or total != money(basket_total) or total > money(original_total):
         raise ValueError('Bolt final basket total does not reconcile; handover remains blocked.')
     return {'items': rows, 'total_order_price': {'value': float(total), 'currency': 'EUR'}}

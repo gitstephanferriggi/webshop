@@ -24,7 +24,8 @@ def request(settings,path,payload):
     if response.status_code == 304 and path in EMPTY_OK_PATHS:
         return {'unchanged': True}
     response.raise_for_status()
-    if response.status_code == 200 and not response.content.strip() and path in EMPTY_OK_PATHS:
+    if response.status_code == 200 and not response.content.strip() and (path in EMPTY_OK_PATHS or path == '/genericClient/markOrderWithItemsAsReadyForPickUp'):
+        # Adjusted readiness still requires an independent final-basket readback.
         return {}
     data=response.json()
     if not isinstance(data, dict):

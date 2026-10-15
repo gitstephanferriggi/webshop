@@ -20,6 +20,8 @@ class ClientTests(unittest.TestCase):
   for path in self.client.EMPTY_OK_PATHS:
    self.assertEqual(self.client.request(self.settings,path,{'provider_id':'test'}),{})
   self.response.json.assert_not_called()
+ def test_adjusted_ready_empty_success(self):
+  self.assertEqual(self.client.request(self.settings,'/genericClient/markOrderWithItemsAsReadyForPickUp',{}),{})
  def test_already_in_requested_state(self):
   self.response.status_code=304
   for path in self.client.EMPTY_OK_PATHS:
