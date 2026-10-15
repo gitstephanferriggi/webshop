@@ -5,6 +5,7 @@ No customer emails, payment entries or stock ledger postings are initiated here.
 """
 import json
 import hashlib
+from contextlib import contextmanager
 import frappe
 from frappe.utils import nowdate, get_url
 from webshop.bolt_integration.orders import order_key, sales_lines, money
@@ -22,6 +23,21 @@ def enabled_settings():
     return s
 
 
+@contextmanager
+def _processing_user():
+    """Elevate private ERP work, never the webhook account or its API access."""
+    user = frappe.session.user
+    session = dict(frappe.local.session)
+    form = frappe.local.form_dict
+    try:
+        frappe.set_user('Administrator')
+        yield
+    finally:
+        frappe.set_user(user)
+        frappe.local.session.update(session)
+        frappe.local.form_dict = form
+
+
 def process_pending():
     s=enabled_settings()
     if not s:
@@ -34,11 +50,12 @@ def process_pending():
             if event.status not in ('Captured', 'Retry'):
                 frappe.db.commit()
                 continue
-            process_event(event,s)
+            with _processing_user():
+                process_event(event,s)
             frappe.db.commit()
         except Exception as exc:
             frappe.db.rollback(save_point='bolt_process')
-            frappe.db.set_value('Callus Bolt Event',name,{'status':'Review','processing_error':str(exc)[:1000]})
+            frappe.db.set_value('Callus Bolt Event',name,{'status':'Review','processing_error':(str(exc) or type(exc).__name__)[:1000]})
             frappe.db.commit()
             frappe.log_error(title='Bolt order requires review',message=frappe.get_traceback())
 
@@ -186,6 +203,20 @@ def run_now():
     frappe.only_for('System Manager')
     process_pending()
     return {'ok':True}
+
+
+@frappe.whitelist(methods=['POST'])
+def retry_event(name):
+    """Manager recovery without granting callers write access to the inbox."""
+    frappe.only_for('System Manager')
+    event = frappe.get_doc('Callus Bolt Event', name, for_update=True)
+    if event.status != 'Review':
+        frappe.throw('Only an event requiring review can be retried.')
+    event.db_set({'status': 'Retry', 'processing_error': ''})
+    process_pending()
+    event.reload()
+    return {'status': event.status, 'sales_order': event.get('sales_order'),
+            'processing_error': event.get('processing_error')}
 
 
 def site_due_at(timestamp):

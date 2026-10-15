@@ -30,6 +30,33 @@ class ProcessingTests(unittest.TestCase):
   self.f.get_doc.assert_called_once_with('Callus Bolt Event','event1',for_update=True)
   process.assert_called_once_with(event,settings)
   self.f.db.commit.assert_called_once()
+ def test_worker_uses_internal_identity_and_restores_webhook_user(self):
+  self.f.session.user='bolt-webhook@example.com'
+  self.f.local.session={'user':'bolt-webhook@example.com','sid':'original'}
+  form={'original':True};self.f.local.form_dict=form
+  def set_user(user):
+   self.f.session.user=user
+   self.f.local.session={'user':user}
+  self.f.set_user.side_effect=set_user
+  for fail in [False,True]:
+   with self.subTest(failure=fail):
+    try:
+     with self.p._processing_user():
+      self.assertEqual(self.f.session.user,'Administrator')
+      if fail:raise RuntimeError('ERP validation failed')
+    except RuntimeError:pass
+    self.assertEqual(self.f.session.user,'bolt-webhook@example.com')
+    self.assertEqual(self.f.local.session,{'user':'bolt-webhook@example.com','sid':'original'})
+    self.assertIs(self.f.local.form_dict,form)
+ def test_retry_requires_manager_before_reading_event(self):
+  self.f.only_for.side_effect=PermissionError
+  with self.assertRaises(PermissionError):self.p.retry_event('event1')
+  self.f.get_doc.assert_not_called()
+ def test_retry_refuses_processed_events(self):
+  self.f.get_doc.return_value=NS(status='Processed')
+  self.f.throw.side_effect=ValueError
+  with self.assertRaises(ValueError):self.p.retry_event('event1')
+
  def test_due_time_is_site_local_without_timezone_for_mariadb(self):
   from datetime import datetime, timezone
   from zoneinfo import ZoneInfo
