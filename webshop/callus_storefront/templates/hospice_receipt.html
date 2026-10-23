@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{font:14px Arial,sans-serif;color:#24392e;margin:24px}h1{font:30px Georgia,serif;margin:24px 0 12px}
+.brand{font-size:19px;font-weight:bold;border-bottom:3px solid #244c3a;padding-bottom:16px}.tag{font-size:11px;letter-spacing:1px;color:#58734b}
+.details{line-height:1.8;margin:20px 0}table{width:100%;border-collapse:collapse;margin:24px 0}th,td{text-align:left;border-bottom:1px solid #dce1d6;padding:11px 8px;vertical-align:top}th{background:#f2f5ee}.qty{text-align:right;width:90px}
+.evidence{page-break-inside:avoid;border:1px solid #dce1d6;padding:20px;margin-top:24px}.signature{max-width:280px;max-height:110px;width:auto;height:auto;display:block;margin:8px 0}.footer{font-size:11px;color:#577149;margin-top:30px;border-top:1px solid #dce1d6;padding-top:14px}.muted{font-size:12px;color:#526253}
+</style></head><body>
+<div class="brand">CALLUS GARDEN CENTRE</div>
+<p class="tag">SUPPORTING HOSPICE MALTA</p>
+<h1>{{ 'Signed collection receipt' if receipt.handover_type == 'Pickup' else 'Signed delivery receipt' }}</h1>
+<div class="details"><strong>Order:</strong> {{ receipt.sales_order | e }}<br>
+<strong>Receipt:</strong> {{ receipt.name | e }}<br>
+<strong>{{ 'Collected at' if receipt.handover_type == 'Pickup' else 'Delivered at' }}:</strong> {{ date_label | e }} ({{ receipt.timezone | e }})<br>
+<strong>{{ 'Collection location' if receipt.handover_type == 'Pickup' else 'Fulfilment' }}:</strong> {{ 'Callus Garden Centre' if receipt.handover_type == 'Pickup' else 'Delivery to the customer' }}</div>
+<p>This receipt records the goods received at this handover. It does not replace the sales invoice.</p>
+<table><thead><tr><th>Product</th><th class="qty">Quantity</th><th>Unit</th></tr></thead><tbody>
+{% for row in receipt['items'] %}<tr><td>{{ row.item_name | e }}<br><span class="muted">{{ row.item_code | e }}</span></td><td class="qty">{{ '%g' | format(row.qty) }}</td><td>{{ row.uom | e }}</td></tr>{% endfor %}
+</tbody></table>
+<div class="evidence"><strong>Order {{ receipt.sales_order | e }}</strong><br><strong>{{ 'Collector' if receipt.handover_type == 'Pickup' else 'Recipient' }}:</strong> {{ receipt.recipient_name | e }}
+<p>{{ receipt.acknowledgement | e }}</p><img class="signature" src="{{ receipt.signature | e }}" alt="Recipient signature"><br>
+<span class="muted">Recorded by {{ receipt.staff_name | e }} at {{ date_label | e }}.</span></div>
+<div class="footer">Thank you for supporting Hospice Malta.<br>info@callusgardencentre.com · +356 2146 2229 · +356 9911 9529</div>
+</body></html>

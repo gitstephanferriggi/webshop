@@ -224,10 +224,9 @@ class HospiceIntegrationTests(unittest.TestCase):
         self.assertFalse(note.customer_address)
         self.assertFalse(note.shipping_address_name)
         self.assertEqual(frappe.get_doc('Sales Order',doc.sales_order).custom_hospice_status,'Ready for pickup')
-        fulfilment.set_preparation(doc.sales_order,'Collected')
-        self.assertEqual(frappe.get_doc('Sales Order',doc.sales_order).custom_hospice_status,'Collected')
-        self.sent.reset_mock();fulfilment.queue_pickup_ready_email(doc.name)
-        self.sent.assert_not_called()
+        with self.assertRaises(frappe.ValidationError):
+            fulfilment.set_preparation(doc.sales_order,'Collected')
+        self.assertEqual(frappe.get_doc('Sales Order',doc.sales_order).custom_hospice_status,'Ready for pickup')
 
     def test_collection_requires_stock_handover_document(self):
         self.buyer['delivery']='collection'

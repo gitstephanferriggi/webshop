@@ -93,6 +93,19 @@ for _doctype in ("Pick List", "Delivery Note", "Delivery Trip", "Delivery Execut
         for event in ("on_update", "on_submit", "on_update_after_submit", "on_cancel", "after_delete")
     }
 doc_events["Delivery Note"]["validate"] = "webshop.callus_storefront.hospice_fulfilment.clear_linked_pickup_address"
+doc_events["Delivery Note"]["before_cancel"] = "webshop.callus_storefront.hospice_collection.protect_signed_stock"
+doc_events["Delivery Execution"]["before_submit"] = "webshop.callus_storefront.hospice_receipts.validate_delivery_signature"
+doc_events["Delivery Execution"]["on_submit"] = [
+    "webshop.callus_storefront.hospice_fulfilment.on_fulfilment_change",
+    "webshop.callus_storefront.hospice_receipts.enqueue_delivery",
+]
+doc_events["Delivery Execution"]["on_cancel"] = [
+    "webshop.callus_storefront.hospice_fulfilment.on_fulfilment_change",
+    "webshop.callus_storefront.hospice_receipts.on_delivery_cancel",
+]
+
+# The delivery app consults these before using a customer's default contact email.
+customer_pod_email_handlers = ["webshop.callus_storefront.hospice_receipts.handle_customer_pod_email"]
 
 has_website_permission = {
     "Website Item": "webshop.webshop.doctype.website_item.website_item.has_website_permission_for_website_item",
@@ -127,7 +140,7 @@ permission_query_conditions = {'*': 'webshop.callus_storefront.marketing_access.
 auth_hooks = ['webshop.bolt_integration.webhooks.restrict_service_user']
 
 # Keep the independent Bolt product selection field reproducible on site migration.
-after_migrate = ["webshop.callus_storefront.hospice.setup", "webshop.bolt_integration.setup.ensure_product_flag", "webshop.bolt_integration.setup.ensure_operations_roles", "webshop.callus_storefront.product_images.setup"]
+after_migrate = ["webshop.callus_storefront.hospice.setup", "webshop.callus_storefront.hospice_receipts.setup", "webshop.bolt_integration.setup.ensure_product_flag", "webshop.bolt_integration.setup.ensure_operations_roles", "webshop.callus_storefront.product_images.setup"]
 
 # Public campaign responses must never be cached or embedded.
 after_request = ["webshop.callus_storefront.hospice.private_response"]

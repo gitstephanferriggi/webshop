@@ -21,7 +21,8 @@
   "hospice_items",
   "hospice_test_email",
   "hospice_delivery_item",
-  "hospice_free_delivery_from"
+  "hospice_free_delivery_from",
+  "hospice_signed_receipts_from"
  ],
  "fields": [
   {
@@ -124,6 +125,13 @@
    "label": "Hospice Free Delivery From",
    "default": "35",
    "description": "Product subtotal including VAT. Delivery is free at or above this amount."
+  },
+  {
+   "fieldname": "hospice_signed_receipts_from",
+   "label": "Signed Delivery Receipts From",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "description": "Set once on upgrade. Older deliveries are not automatically emailed."
   }
  ],
  "permissions": [

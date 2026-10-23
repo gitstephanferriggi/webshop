@@ -1,0 +1,225 @@
+{
+ "doctype": "DocType",
+ "name": "Callus Handover",
+ "module": "Webshop",
+ "engine": "InnoDB",
+ "autoname": "format:HO-{YYYY}-{#####}",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "field_order": [
+  "source_key",
+  "checkout",
+  "sales_order",
+  "company",
+  "handover_type",
+  "delivery_execution",
+  "delivery_notes",
+  "recipient_name",
+  "signature",
+  "acknowledgement",
+  "handed_over_at",
+  "timezone",
+  "recorded_by",
+  "staff_name",
+  "customer_email",
+  "items",
+  "receipt_pdf",
+  "email_state",
+  "email_queued_at",
+  "last_error",
+  "resend_count",
+  "receipt_file",
+  "pdf_sha256"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_key",
+   "fieldtype": "Data",
+   "label": "Source Key",
+   "read_only": 1,
+   "unique": 1,
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "checkout",
+   "fieldtype": "Link",
+   "label": "Checkout",
+   "read_only": 1,
+   "options": "Callus Checkout",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "read_only": 1,
+   "options": "Sales Order",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "read_only": 1,
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "handover_type",
+   "fieldtype": "Select",
+   "label": "Handover Type",
+   "read_only": 1,
+   "options": "Pickup\nDelivery",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "delivery_execution",
+   "fieldtype": "Data",
+   "label": "Delivery Execution",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_notes",
+   "fieldtype": "Small Text",
+   "label": "Delivery Notes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recipient_name",
+   "fieldtype": "Data",
+   "label": "Collector / Recipient",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "signature",
+   "fieldtype": "Signature",
+   "label": "Signature",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "acknowledgement",
+   "fieldtype": "Small Text",
+   "label": "Acknowledgement",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "handed_over_at",
+   "fieldtype": "Datetime",
+   "label": "Handed Over At",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "recorded_by",
+   "fieldtype": "Link",
+   "label": "Recorded By",
+   "read_only": 1,
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "staff_name",
+   "fieldtype": "Data",
+   "label": "Staff Name",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "label": "Customer Email",
+   "read_only": 1,
+   "options": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items Received",
+   "read_only": 1,
+   "options": "Callus Handover Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "receipt_pdf",
+   "fieldtype": "Attach",
+   "label": "Signed Receipt PDF",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "email_state",
+   "fieldtype": "Select",
+   "label": "Receipt Email",
+   "read_only": 1,
+   "options": "Pending\nQueued\nFailed\nSuperseded",
+   "default": "Pending",
+   "allow_on_submit": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "email_queued_at",
+   "fieldtype": "Datetime",
+   "label": "Email Queued At",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Receipt Processing Error",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "resend_count",
+   "fieldtype": "Int",
+   "label": "Resend Count",
+   "read_only": 1,
+   "default": "0",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "Time Zone",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "receipt_file",
+   "fieldtype": "Link",
+   "label": "Receipt File",
+   "read_only": 1,
+   "hidden": 1,
+   "allow_on_submit": 1,
+   "options": "File"
+  },
+  {
+   "fieldname": "pdf_sha256",
+   "fieldtype": "Data",
+   "label": "Receipt SHA-256",
+   "read_only": 1,
+   "hidden": 1,
+   "allow_on_submit": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ]
+}

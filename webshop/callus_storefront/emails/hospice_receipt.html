@@ -1,0 +1,8 @@
+<div style="font:16px Arial,sans-serif;color:#24392e;max-width:620px;margin:auto;padding:28px">
+<h1>{{ 'Your collection receipt' if receipt.handover_type == 'Pickup' else 'Your delivery receipt' }}</h1>
+<p>Thank you for supporting Hospice Malta.</p>
+<p>Your signed receipt for order <strong>{{ receipt.sales_order | e }}</strong> is attached.</p>
+<p>{{ 'Collected by' if receipt.handover_type == 'Pickup' else 'Received by' }} {{ receipt.recipient_name | e }} at {{ date_label | e }} ({{ receipt.timezone | e }}).</p>
+<p>The receipt lists only the quantities received at this handover. Any remaining items continue to appear on your order tracking.</p>
+<p>For assistance, contact <a href="mailto:info@callusgardencentre.com">info@callusgardencentre.com</a><br>+356 2146 2229 · +356 9911 9529</p>
+</div>

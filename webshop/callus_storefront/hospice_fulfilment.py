@@ -168,10 +168,8 @@ def validate_preparation(doc, method=None):
     if old.custom_hospice_preparation == "Collected" and doc.custom_hospice_preparation != "Collected":
         frappe.throw("A collected order requires the normal return workflow.")
     if doc.custom_hospice_preparation == "Collected":
-        if progress_for(old, payment)["delivery_state"] != "Ready for pickup":
-            frappe.throw("Mark the pickup order ready before recording collection.")
-        if not operational_facts(doc)[2]:
-            frappe.throw("Submit the Delivery Note for all goods before recording collection.")
+        if not frappe.db.exists("Callus Handover", {"source_key":"pickup:" + payment.name, "docstatus":1}):
+            frappe.throw("Use Confirm collection to record the collector's name and signature.")
 
 
 @frappe.whitelist(methods=["POST"])
@@ -226,3 +224,5 @@ def reconcile():
         if len(rows) < 200:
             break
         start += 200
+    from webshop.callus_storefront.hospice_receipts import reconcile as reconcile_receipts
+    reconcile_receipts()
