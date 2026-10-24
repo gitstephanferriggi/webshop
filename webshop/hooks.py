@@ -32,6 +32,8 @@ override_doctype_class = {
 }
 
 doctype_js = {
+    "Callus Bolt Event": "public/js/bolt_review.js",
+    "Callus Bolt Order": "public/js/bolt_review.js",
     "Sales Order": "public/js/hospice_sales_order.js",
     "Item": "public/js/override/item.js",
     "Homepage": "public/js/override/homepage.js",

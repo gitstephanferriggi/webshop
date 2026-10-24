@@ -120,3 +120,23 @@ After migration, verify the percentage in UAT and run a fresh catalogue/price sy
 An already-running sync retains its saved snapshot until the next sync cycle.
 Existing orders retain their original price. Production integration remains disabled
 until separately enabled; deploying code alone does not publish new prices there.
+
+### Manager review resolution
+
+System Managers can open a **Callus Bolt Event** or **Callus Bolt Order** in Desk
+and use **Resolve review**, supplying a reason. No general write permission is
+added. The server checks the configured hostname/provider and records the user,
+reason and verified return references in a Comment.
+
+Historical synthetic Staging events may be ignored; linked orders must already
+be cancelled. Unlinked live events and events for unresolved sales are blocked.
+The original event payload/error is retained, and no event is replayed.
+
+Cancelled orders require a verified cancellation webhook. Posted sales require
+submitted full returns matching customer, company, currency, amount, item stock
+quantities and warehouses. POS returns must reverse the original tender/account
+and be consolidated into submitted credit notes against the original consolidated
+invoice. **Close the return shift first.** Unfulfilled, unbilled Sales Orders are
+cancelled through the normal permission-checked controller. No external Bolt
+refund request is made. The action then marks the order Cancelled, removing it
+from the active queue while retaining its history.
