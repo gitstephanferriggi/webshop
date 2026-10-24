@@ -101,6 +101,8 @@ def process_event(event,s):
             if order.source_hash != basket_hash(p):
                 frappe.throw('Changed order amount requires staff review')
         else:
+            from webshop.bolt_integration.entitlement import require_new_work
+            require_new_work(s)
             create_sale(order,p,s)
     elif event.event_type=='order_update':
         order.last_bolt_status=p.get('request_type')

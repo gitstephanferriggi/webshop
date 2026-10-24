@@ -39,6 +39,9 @@ def tick():
         return
     if urlparse(get_url()).hostname!=s.site_hostname:
         return
+    from webshop.bolt_integration.entitlement import new_work_allowed
+    if not new_work_allowed(s):
+        return
     # One worker owns each tick; network stages resume on later scheduler ticks.
     with frappe.cache().lock('callus-bolt-catalogue',timeout=240,blocking_timeout=1):
         try:
