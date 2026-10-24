@@ -96,8 +96,14 @@ def resolve_review(doctype, name, reason):
             so = frappe.get_doc('Sales Order', doc.sales_order, for_update=True)
             require(not so.per_delivered and not so.per_billed, 'Review delivered or billed Sales Order before resolving.')
             if so.docstatus == 1:
-                so.check_permission('cancel')
-                so.cancel()
+                if references:
+                    # Posted invoices and returns retain their Sales Order links.
+                    # Closing prevents fulfilment without breaking that audit trail.
+                    so.check_permission('submit')
+                    so.update_status('Closed')
+                else:
+                    so.check_permission('cancel')
+                    so.cancel()
         values = {'status': 'Cancelled', 'workflow_state': 'Cancelled', 'operation_error': ''}
     else:
         require(doc.status == 'Review', 'Only an event needing review can be resolved.')

@@ -136,7 +136,8 @@ Cancelled orders require a verified cancellation webhook. Posted sales require
 submitted full returns matching customer, company, currency, amount, item stock
 quantities and warehouses. POS returns must reverse the original tender/account
 and be consolidated into submitted credit notes against the original consolidated
-invoice. **Close the return shift first.** Unfulfilled, unbilled Sales Orders are
-cancelled through the normal permission-checked controller. No external Bolt
+invoice. **Close the return shift first.** Unfulfilled, unbilled Sales Orders with verified returns are closed through
+the standard permission-checked controller, preserving invoice links. Orders
+without posted sales are cancelled normally. No external Bolt
 refund request is made. The action then marks the order Cancelled, removing it
 from the active queue while retaining its history.

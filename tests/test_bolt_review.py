@@ -93,15 +93,28 @@ class ReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'verified Bolt cancellation'):
             self.m.resolve_review('Callus Bolt Order','o','Cancellation reviewed')
 
-    def test_completed_cancellation_resolves_with_audit_and_normal_so_cancel(self):
+    def test_reversed_sale_closes_linked_order_without_cancelling(self):
         order = NS(provider_id='P', environment='Staging', workflow_state='Needs attention',
                    bolt_order_id='42', sales_order='SO', add_comment=MagicMock(), db_set=MagicMock())
-        so = NS(per_delivered=0, per_billed=0, docstatus=1, check_permission=MagicMock(), cancel=MagicMock())
+        so = NS(per_delivered=0, per_billed=0, docstatus=1, check_permission=MagicMock(), cancel=MagicMock(), update_status=MagicMock())
         self.f.get_doc.side_effect=[order, so]; self.f.db.exists.return_value=True
         with patch.object(self.m, 'verify_sale', return_value=['RETURN', 'CREDIT']):
             result=self.m.resolve_review('Callus Bolt Order','o','Cancellation and full return reviewed')
-        so.check_permission.assert_called_once_with('cancel')
-        so.cancel.assert_called_once()
+        so.check_permission.assert_called_once_with('submit')
+        so.update_status.assert_called_once_with('Closed')
+        so.cancel.assert_not_called()
         order.add_comment.assert_called_once()
         order.db_set.assert_called_once_with({'status':'Cancelled','workflow_state':'Cancelled','operation_error':''})
         self.assertEqual(result['references'], ['RETURN','CREDIT'])
+
+    def test_uninvoiced_cancellation_still_cancels_sales_order(self):
+        order = NS(provider_id='P', environment='Staging', workflow_state='Needs attention',
+                   bolt_order_id='42', sales_order='SO', add_comment=MagicMock(), db_set=MagicMock())
+        so = NS(per_delivered=0, per_billed=0, docstatus=1, check_permission=MagicMock(),
+                cancel=MagicMock(), update_status=MagicMock())
+        self.f.get_doc.side_effect=[order, so]; self.f.db.exists.return_value=True
+        with patch.object(self.m, 'verify_sale', return_value=[]):
+            self.m.resolve_review('Callus Bolt Order','o','Unfulfilled cancellation reviewed')
+        so.check_permission.assert_called_once_with('cancel')
+        so.cancel.assert_called_once()
+        so.update_status.assert_not_called()
