@@ -1,6 +1,8 @@
 import importlib,json,sys,unittest
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock,patch
+def raise_error(message):
+ raise ValueError(message)
 class SyncTests(unittest.TestCase):
  def setUp(self):
   self.f=MagicMock();self.f.whitelist=lambda **kw:lambda fn:fn;self.modules=patch.dict(sys.modules,{'frappe':self.f,'frappe.utils':MagicMock(),'requests':MagicMock()});self.modules.start()
@@ -23,4 +25,22 @@ class SyncTests(unittest.TestCase):
   self.f.db.set_single_value.assert_not_called()
  def test_review_pauses_sync(self):
   with patch.object(self.m,'request') as req:self.m.step(self.settings('Review'));req.assert_not_called()
+ def test_invalid_published_selection_is_zeroed_before_review(self):
+  s=self.settings('Idle');s.last_synced_skus=json.dumps(['A','B','C'])
+  data={'products':[{'sku':'C'}],'excluded':[{'item_code':'A','reason':'disabled'}]}
+  self.f.throw.side_effect=raise_error
+  with patch.object(self.m,'snapshot',return_value=data),patch.object(self.m,'request',return_value={'affected_skus':2}) as req:
+   with self.assertRaisesRegex(ValueError,'mapping review'):self.m.step(s)
+  req.assert_called_once_with(s,'/genericClient/updateMenuQuantity',{'provider_id':'test','sku_quantities':[{'sku':'A','quantity':0},{'sku':'B','quantity':0}]})
+  self.f.db.set_single_value.assert_not_called()
+ def test_invalid_unpublished_selection_does_not_send_quantity(self):
+  s=self.settings('Idle');self.f.throw.side_effect=raise_error
+  with patch.object(self.m,'snapshot',return_value={'products':[],'excluded':[{'item_code':'A'}]}),patch.object(self.m,'request') as req:
+   with self.assertRaisesRegex(ValueError,'mapping review'):self.m.step(s)
+  req.assert_not_called()
+ def test_incomplete_withdrawal_requires_explicit_review(self):
+  s=self.settings('Idle');s.last_synced_skus=json.dumps(['A']);self.f.throw.side_effect=raise_error
+  with patch.object(self.m,'snapshot',return_value={'products':[],'excluded':[{'item_code':'A'}]}),patch.object(self.m,'request',return_value={'affected_skus':0}):
+   with self.assertRaisesRegex(ValueError,'verify Bolt availability'):self.m.step(s)
+  self.f.db.set_single_value.assert_not_called()
 if __name__=='__main__':unittest.main()
