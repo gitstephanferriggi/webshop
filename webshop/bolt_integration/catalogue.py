@@ -1,5 +1,6 @@
 """Pure Bolt catalogue mapping. Website publication never gates Bolt selection."""
 from decimal import Decimal, ROUND_FLOOR
+from webshop.bolt_integration.categories import category_tree
 from webshop.bolt_integration.pricing import selling_price, markup_percentage
 import hashlib
 import re
@@ -56,8 +57,7 @@ def build(items, website_items, prices, bins, provider_id, asset_base, price_mar
         price_rows.append({'sku': code, 'base_selling_price': selling_price(price, price_markup_percent)})
         stock = bins.get(code, {})
         stocks.append({'sku': code, 'quantity': available_stock(stock.get('actual_qty'), stock.get('reserved_qty')), 'selling_unit': 'piece'})
-    categories = [{'external_id': 'callus-products', 'name': {'en-US': 'Callus Garden Centre'},
-                   'sub_categories': [{'external_id': category_id(g), 'name': {'en-US': g},
-                                       'external_provider_ids': [provider_id]} for g in sorted(groups)]}]
+    categories = category_tree([{'external_id': category_id(g), 'name': {'en-US': g},
+                                'external_provider_ids': [provider_id]} for g in sorted(groups)])
     return {'products': products, 'categories': categories, 'prices': price_rows,
             'stocks': stocks, 'excluded': excluded}
