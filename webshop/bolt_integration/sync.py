@@ -39,6 +39,9 @@ def tick():
         return
     if urlparse(get_url()).hostname!=s.site_hostname:
         return
+    from webshop.bolt_integration.entitlement import new_work_allowed
+    if not new_work_allowed(s):
+        return
     # One worker owns each tick; network stages resume on later scheduler ticks.
     with frappe.cache().lock('callus-bolt-catalogue',timeout=240,blocking_timeout=1):
         try:
@@ -69,6 +72,13 @@ def step(s):
         current=[p['sku'] for p in data['products']]
         data['removed']=sorted(set(previous)-set(current))
         if data['excluded']:
+            # Invalid selected products are absent from the valid snapshot too.
+            # Withdraw previously published invalid/unchecked SKUs before pausing;
+            # otherwise Review can leave their last non-zero availability online.
+            if data['removed']:
+                result=call('/genericClient/updateMenuQuantity',{'provider_id':s.provider_id,'sku_quantities':[{'sku':sku,'quantity':0} for sku in data['removed']]})
+                if result.get('affected_skus')!=len(data['removed']):
+                    frappe.throw('Not all invalid or removed products had stock withdrawn; verify Bolt availability')
             frappe.throw('Selected products need mapping review: '+json.dumps(data['excluded'])[:700])
         data['catalogue_hash']=hashlib.sha256(json.dumps({'products':data['products'],'categories':data['categories'],'prices':data['prices']},sort_keys=True,separators=(',',':')).encode()).hexdigest()
         # Changed prices require menu publication too; stock-only changes use the fast path.
