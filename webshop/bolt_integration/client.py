@@ -17,6 +17,9 @@ EMPTY_OK_PATHS = {
 }
 
 def request(settings,path,payload):
+    if path.startswith('/pim/') or path in ('/genericClient/updateMenuQuantity', '/genericClient/acceptOrder', '/genericClient/startAcceptingOrders'):
+        from webshop.bolt_integration.entitlement import require_new_work
+        require_new_work(settings)
     raw=json.dumps(payload,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()
     signature=base64.b64encode(hmac.new(settings.get_password('secret_key').encode(),raw,hashlib.sha256).digest()).decode()
     response=requests.post(BASE+path,data=raw,headers={'Content-Type':'application/json',

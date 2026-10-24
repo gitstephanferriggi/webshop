@@ -155,6 +155,8 @@ def act(profile, name, action, version, quantities=None, note=None, replacements
     if action in REMOTE and frappe.db.exists('Callus Bolt Event', {'provider_id': s.provider_id, 'bolt_order_id': order.bolt_order_id, 'event_type': 'cancel_order'}):
         frappe.throw('Bolt has sent a cancellation. Do not change this order.')
     if action == 'accept':
+        from webshop.bolt_integration.entitlement import require_new_work
+        require_new_work(s)
         from webshop.bolt_integration.pos_sales import context
         context(s)
         if order.acceptance_deadline and time.time() >= order.acceptance_deadline:
@@ -438,6 +440,9 @@ def store_status(profile, action):
         frappe.throw('Bolt operations are disabled.')
     if action not in ('open', 'pause'):
         frappe.throw('Choose open or pause.')
+    if action == 'open':
+        from webshop.bolt_integration.entitlement import require_new_work
+        require_new_work(s)
     with frappe.cache().lock('callus-bolt-store-control', timeout=90, blocking_timeout=1):
         s.reload()
         if s.store_action_state in ('Sending', 'Review'):

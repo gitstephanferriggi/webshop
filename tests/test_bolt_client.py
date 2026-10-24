@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 class ClientTests(unittest.TestCase):
  def setUp(self):
   self.requests=MagicMock()
-  self.modules=patch.dict(sys.modules,{'requests':self.requests});self.modules.start()
+  self.modules=patch.dict(sys.modules,{'requests':self.requests,'frappe':MagicMock()});self.modules.start()
   sys.modules.pop('webshop.bolt_integration.client',None)
   self.client=importlib.import_module('webshop.bolt_integration.client')
   self.settings=SimpleNamespace(integrator_id='test',get_password=lambda _: 'test-secret')
