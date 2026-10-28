@@ -50,7 +50,7 @@ def fixtures():
     settings=frappe.get_single('Webshop Settings')
     settings.update(dict(enabled=1,show_price=1,enable_checkout=0,company=COMPANY,price_list='Checkout Retail',default_customer_group='Checkout Retail',quotation_series='QTN-CART-',payment_gateway_account=gateway))
     settings.save()
-    new=frappe.get_single('Callus Checkout Settings');new.update(dict(enabled=1,site_url='http://checkout.localhost',stripe_settings='Checkout Test',maximum_order_total=1000,allow_live_payments=0,webhook_endpoint='we_local_fixture',webhook_secret='whsec_local_fixture'));new.save()
+    new=frappe.get_single('Callus Checkout Settings');new.update(dict(enabled=1,prices_include_vat=1,site_url='http://checkout.localhost',stripe_settings='Checkout Test',maximum_order_total=1000,allow_live_payments=0,webhook_endpoint='we_local_fixture',webhook_secret='whsec_local_fixture'));new.save()
     frappe.conf.host_name='http://checkout.localhost'
     for code in ['CHECKOUT-BASIL','CHECKOUT-EMPTY']:
         if not frappe.db.exists('Item',code):
@@ -187,6 +187,87 @@ class CheckoutIntegrationTests(unittest.TestCase):
         api.refund(doc.name);doc.reload()
         invoice=frappe.get_doc('Sales Invoice',doc.sales_invoice);credit=frappe.get_doc('Sales Invoice',doc.credit_note)
         self.assertAlmostEqual(invoice.total_taxes_and_charges,-credit.total_taxes_and_charges,places=2)
+    def test_exclusive_master_cannot_add_vat_to_website_shelf_prices(self):
+        company = frappe.get_doc('Company', COMPANY)
+        parent = frappe.db.get_value('Account', {'company': COMPANY, 'account_name': 'Duties and Taxes'}, 'name')
+        account = frappe.get_doc(dict(doctype='Account', account_name='VAT guard '+self.token[:8],
+            company=COMPANY, parent_account=parent, account_type='Tax', account_currency='EUR')).insert().name
+        template = frappe.get_doc(dict(doctype='Sales Taxes and Charges Template',
+            title='Exclusive master '+self.token[:8], company=COMPANY,
+            taxes=[dict(charge_type='On Net Total', account_head=account, description='VAT 18%',
+                        rate=18, included_in_print_rate=0, cost_center=company.cost_center)])).insert()
+        with patch('erpnext.accounts.party.set_taxes', return_value=template.name):
+            result = self.pay()
+        self.assertEqual(result['summary']['total'], 7)
+        order = frappe.get_doc('Sales Order', api._doc(self.token).sales_order)
+        self.assertGreater(order.total_taxes_and_charges, 1)
+        self.assertTrue(order.taxes[0].included_in_print_rate)
+        self.mark_paid(); api.status(self.token)
+        checkout = api._doc(self.token)
+        invoice = frappe.get_doc('Sales Invoice', checkout.sales_invoice)
+        self.assertEqual(invoice.grand_total, 7)
+        self.assertGreater(invoice.total_taxes_and_charges, 1)
+        self.assertTrue(invoice.taxes[0].included_in_print_rate)
+
+    def test_old_exclusive_draft_cannot_start_a_payment_after_policy_change(self):
+        company = frappe.get_doc('Company', COMPANY)
+        parent = frappe.db.get_value('Account', {'company': COMPANY, 'account_name': 'Duties and Taxes'}, 'name')
+        account = frappe.get_doc(dict(doctype='Account', account_name='Old quote VAT '+self.token[:8],
+            company=COMPANY, parent_account=parent, account_type='Tax', account_currency='EUR')).insert().name
+        template = frappe.get_doc(dict(doctype='Sales Taxes and Charges Template',
+            title='Old quote VAT '+self.token[:8], company=COMPANY,
+            taxes=[dict(charge_type='On Net Total', account_head=account, description='VAT 18%',
+                        rate=18, included_in_print_rate=0, cost_center=company.cost_center)])).insert()
+        try:
+            frappe.db.set_single_value('Callus Checkout Settings', 'prices_include_vat', 0)
+            with patch('erpnext.accounts.party.set_taxes', return_value=template.name):
+                result = self.prepare()
+            self.assertEqual(result['summary']['total'], 8.26)
+            frappe.db.set_single_value('Callus Checkout Settings', 'prices_include_vat', 1)
+            frappe.clear_document_cache('Callus Checkout Settings', 'Callus Checkout Settings')
+            with self.assertRaisesRegex(frappe.ValidationError, 'start a new checkout'):
+                api.pay(self.token)
+            self.assertEqual(self.calls, [])
+            self.assertFalse(api._doc(self.token).stripe_session)
+        finally:
+            # prepare() commits its draft; restore the shared test setting too.
+            frappe.db.set_single_value('Callus Checkout Settings', 'prices_include_vat', 1)
+            frappe.clear_document_cache('Callus Checkout Settings', 'Callus Checkout Settings')
+            frappe.db.commit()
+
+    def test_standard_cart_and_order_mapping_keep_inclusive_prices(self):
+        from webshop.webshop.shopping_cart.cart import set_taxes
+        try:
+            from erpnext.selling.doctype.quotation.quotation import _make_sales_order
+        except ImportError:
+            from erpnext.selling.doctype.quotation.mapper import _make_sales_order
+        self.prepare()
+        original = frappe.get_doc('Sales Order', api._doc(self.token).sales_order)
+        company = frappe.get_doc('Company', COMPANY)
+        parent = frappe.db.get_value('Account', {'company': COMPANY, 'account_name': 'Duties and Taxes'}, 'name')
+        account = frappe.get_doc(dict(doctype='Account', account_name='Cart VAT '+self.token[:8],
+            company=COMPANY, parent_account=parent, account_type='Tax', account_currency='EUR')).insert().name
+        template = frappe.get_doc(dict(doctype='Sales Taxes and Charges Template',
+            title='Cart exclusive '+self.token[:8], company=COMPANY,
+            taxes=[dict(charge_type='On Net Total', account_head=account, description='VAT 18%',
+                        rate=18, included_in_print_rate=0, cost_center=company.cost_center)])).insert()
+        quote = frappe.get_doc(dict(doctype='Quotation', quotation_to='Customer', party_name=original.customer,
+            company=COMPANY, selling_price_list='Checkout Retail', currency='EUR', transaction_date=nowdate(),
+            items=[dict(item_code='CHECKOUT-BASIL', qty=2, rate=3.5)]))
+        quote.set_missing_values()
+        with patch('erpnext.accounts.party.set_taxes', return_value=template.name):
+            set_taxes(quote, frappe.get_single('Webshop Settings'))
+        quote.insert(); quote.submit()
+        self.assertEqual(quote.grand_total, 7)
+        self.assertGreater(quote.total_taxes_and_charges, 1)
+        order = frappe.get_doc(_make_sales_order(quote.name, ignore_permissions=True))
+        order.delivery_date = nowdate()
+        for item in order.items:
+            item.delivery_date = nowdate()
+        order.insert()
+        self.assertEqual(order.grand_total, 7)
+        self.assertTrue(order.taxes[0].included_in_print_rate)
+
     def test_delivery_charge_is_calculated_by_erp(self):
         company=frappe.get_doc('Company',COMPANY)
         rule=frappe.get_doc(dict(doctype='Shipping Rule',label='Checkout Delivery '+self.token[:8],shipping_rule_type='Selling',company=COMPANY,

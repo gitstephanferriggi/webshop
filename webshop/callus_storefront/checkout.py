@@ -213,6 +213,8 @@ def _new_order(doc, items, buyer, shop, settings):
     order.set("taxes", [])
     order.append_taxes_from_master()
     order.append_taxes_from_item_tax_template()
+    from webshop.callus_storefront.vat import apply_website_vat
+    apply_website_vat(order, settings=settings, shop=shop)
     hospice_delivery_item = None
     if doc.get("campaign") == "hospice":
         from webshop.callus_storefront.hospice import price_order
@@ -307,6 +309,8 @@ def pay(token):
             if doc.status == "Pending":
                 return {"url":doc.checkout_url}
             return _public(doc)
+        from webshop.callus_storefront.vat import validate_unpaid_checkout_vat
+        validate_unpaid_checkout_vat(doc, settings=settings)
         if doc.status not in ("Draft", "Pending") or (doc.status == "Draft" and doc.expires_at < time.time()):
             fail("This checkout expired. Please return to your basket.")
         order = frappe.get_doc("Sales Order", doc.sales_order)

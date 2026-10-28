@@ -11,6 +11,7 @@
   "allow_live_payments",
   "stripe_settings",
   "webhook_secret",
+  "prices_include_vat",
   "delivery_rule",
   "maximum_order_total",
   "webhook_endpoint",
@@ -53,6 +54,13 @@
    "fieldname": "webhook_secret",
    "fieldtype": "Password",
    "label": "Webhook Secret"
+  },
+  {
+   "fieldname": "prices_include_vat",
+   "fieldtype": "Check",
+   "label": "Website Prices Include VAT",
+   "default": "1",
+   "description": "Extract VAT from website item prices instead of adding it on top. Applies to standard checkout and shopping cart. Hospice prices always include VAT."
   },
   {
    "fieldname": "delivery_rule",

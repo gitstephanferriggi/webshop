@@ -134,6 +134,9 @@ def place_order():
 						)
 					)
 
+	from webshop.callus_storefront.vat import apply_website_vat
+	if apply_website_vat(sales_order, shop=cart_settings):
+		sales_order.calculate_taxes_and_totals()
 	sales_order.flags.ignore_permissions = True
 	sales_order.insert()
 	sales_order.submit()
@@ -559,6 +562,8 @@ def set_taxes(quotation, cart_settings):
 	# 	# append taxes
 	quotation.append_taxes_from_master()
 	quotation.append_taxes_from_item_tax_template()
+	from webshop.callus_storefront.vat import apply_website_vat
+	apply_website_vat(quotation, shop=cart_settings)
 
 
 def get_party(user=None):
