@@ -31,6 +31,8 @@ The settings retain restricted write permissions. A future catalogue change can 
 
 ## Plan delivery from the Sales Order
 
+After deploying a new Webshop build, reload the Sales Order to load the delivery-trip actions in the Hospice menu.
+
 Paid Hospice delivery orders at **Ready for dispatch** have **Hospice → New delivery trip** and **Hospice → Add to delivery trip** actions. Select an existing submitted Delivery Note; the new-trip dialog also requires a driver, vehicle and departure time. Existing trips must be normal drafts in the same company. Both actions save a draft and open it for review; staff submit the trip separately to release it. No Delivery Note or stock movement is created by these actions.
 
 The stop uses the order/Delivery Note's own delivery address and contact, never a default on the shared cash customer. Document permissions are checked server-side. A note already on another draft or submitted trip is rejected; adding it again to the same draft returns that trip without another stop. Combined-order notes must be planned from Delivery Trip for deliberate review.
