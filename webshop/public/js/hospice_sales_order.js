@@ -16,6 +16,10 @@ frappe.ui.form.on('Sales Order', {
       args: {order_name: frm.doc.name, state}, freeze: true,
       callback: () => frm.reload_doc()
     }), __('Hospice'));
+    if (!pickup && status === 'Ready for dispatch') {
+      if (frappe.model.can_create('Delivery Trip')) frm.add_custom_button(__('New delivery trip'), () => hospice_trip(frm, true), __('Hospice'));
+      if (frappe.model.can_write('Delivery Trip')) frm.add_custom_button(__('Add to delivery trip'), () => hospice_trip(frm, false), __('Hospice'));
+    }
     if (status === 'Awaiting preparation') action('Start preparation', 'Preparing');
     if (pickup && status !== 'Ready for pickup') action('Ready for pickup', 'Ready for pickup');
     if (pickup && status === 'Ready for pickup') frm.add_custom_button(__('Confirm collection'), () => hospice_collection(frm), __('Hospice'));
@@ -85,5 +89,43 @@ async function hospice_receipts(frm) {
       else send();
     });
   });
+  dialog.show();
+}
+
+
+async function hospice_trip(frm, create) {
+  if (frm.is_dirty()) return frappe.msgprint(__('Save the Sales Order before planning its delivery.'));
+  const response = await frappe.call({method: 'webshop.callus_storefront.hospice_trips.trip_options',
+    args: {order_name: frm.doc.name}, freeze: true});
+  if (!response.message) return;
+  const data = response.message;
+  const fields = [
+    {fieldtype: 'Select', fieldname: 'delivery_note', label: __('Delivery Note'),
+      options: data.delivery_notes, default: data.delivery_notes[0], reqd: 1},
+    {fieldtype: 'HTML', options: `<p>${__('The trip will remain a draft. Review and submit it separately to release it to the driver.')}</p>`}
+  ];
+  if (create) fields.push(
+    {fieldtype: 'Link', fieldname: 'driver', label: __('Driver'), options: 'Driver', reqd: 1,
+      get_query: () => ({filters: {status: 'Active'}})},
+    {fieldtype: 'Link', fieldname: 'vehicle', label: __('Vehicle'), options: 'Vehicle', reqd: 1},
+    {fieldtype: 'Datetime', fieldname: 'departure_time', label: __('Departure Time'), reqd: 1, default: data.departure_time}
+  );
+  else fields.push({fieldtype: 'Link', fieldname: 'trip_name', label: __('Draft Delivery Trip'),
+    options: 'Delivery Trip', reqd: 1, get_query: () => ({filters: {
+      docstatus: 0, company: data.company, custom_is_bowser_trip: 0
+    }})});
+  const dialog = new frappe.ui.Dialog({title: __(create ? 'New delivery trip' : 'Add to delivery trip'), fields,
+    primary_action_label: __(create ? 'Create draft trip' : 'Add to draft trip'), async primary_action() {
+      const values = dialog.get_values();
+      if (!values) return;
+      dialog.get_primary_btn().prop('disabled', true);
+      try {
+        const result = await frappe.call({method: 'webshop.callus_storefront.hospice_trips.add_to_trip',
+          args: {order_name: frm.doc.name, ...values}, freeze: true});
+        if (!result.message) return;
+        dialog.hide();
+        frappe.set_route('Form', 'Delivery Trip', result.message.name);
+      } finally { dialog.get_primary_btn().prop('disabled', false); }
+    }});
   dialog.show();
 }
