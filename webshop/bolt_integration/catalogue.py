@@ -4,7 +4,7 @@ from webshop.bolt_integration.categories import category_tree
 from webshop.bolt_integration.pricing import selling_price, markup_percentage
 import hashlib
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import quote, urljoin, urlparse, urlsplit, urlunsplit
 
 
 def category_id(group):
@@ -52,7 +52,9 @@ def build(items, website_items, prices, bins, provider_id, asset_base, price_mar
         if image and not image.startswith('/private/'):
             image = urljoin(asset_base, image)
             if urlparse(image).scheme == 'https':
-                product['image_url'] = image
+                parts = urlsplit(image)
+                product['image_url'] = urlunsplit((parts.scheme, parts.netloc,
+                    quote(parts.path, safe='/%:@'), quote(parts.query, safe='=&%:@/?'), ''))
         products.append(product)
         price_rows.append({'sku': code, 'base_selling_price': selling_price(price, price_markup_percent)})
         stock = bins.get(code, {})

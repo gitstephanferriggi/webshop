@@ -33,6 +33,21 @@ def request(settings,path,payload):
     data=response.json()
     if not isinstance(data, dict):
         raise ValueError('Unexpected Bolt response for ' + path)
+    # Callus explicitly approved this metadata tag; ERP item groups own VAT.
+    # Retain every other warning and error as a publication blocker.
+    if (path == '/pim/v1/products/import/status/retrieve'
+            and getattr(settings, 'vat_tag', None) == 'bm_vat_0'):
+        for scope in (data, data.get('data')):
+            if not isinstance(scope, dict):
+                continue
+            warnings = scope.get('warnings') or []
+            retained = [warning for warning in warnings if not (
+                isinstance(warning, dict)
+                and warning.get('message', '').startswith('VAT tag "bm_vat_0" not found for SKU ')
+                and '\n' not in warning['message'] and '\r' not in warning['message'])]
+            if len(retained) != len(warnings):
+                scope['warnings'] = retained
+                scope['acknowledged_vat_warning_count'] = len(warnings) - len(retained)
     if data.get('code',0)!=0 or data.get('errors') or data.get('warnings'):
         # Do not dump raw requests, auth headers, or customer baskets.
         raise ValueError('Bolt rejected '+path+': '+str(data.get('message') or data.get('errors') or data.get('warnings'))[:500])

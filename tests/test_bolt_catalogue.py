@@ -20,4 +20,16 @@ class CatalogueTests(unittest.TestCase):
     def test_unpriced_selection_is_reported_not_sent(self):
         d=build({'A':dict(item_group='Shrubs',stock_uom='Pcs',is_sales_item=1)},[dict(item_code='A',custom_bolt_enabled=1)],{}, {},'p','https://example.com')
         self.assertFalse(d['products']);self.assertEqual(len(d['excluded']),1)
+    def image(self,path):
+        return build({'A':dict(name='A',item_name='Plant',item_group='Shrubs',stock_uom='Pcs',is_sales_item=1)},
+                     [dict(item_code='A',custom_bolt_enabled=1,website_image=path)],{'A':12.5},
+                     {},'test-store','https://example.com')['products'][0].get('image_url')
+    def test_live_filename_spaces_are_url_encoded(self):
+        self.assertEqual(self.image('/files/peperomia mix.jpg'),'https://example.com/files/peperomia%20mix.jpg')
+    def test_encoded_filenames_remain_stable_on_repeated_sync(self):
+        self.assertEqual(self.image('/files/peperomia%20mix.jpg'),'https://example.com/files/peperomia%20mix.jpg')
+    def test_private_images_are_not_published(self):
+        self.assertIsNone(self.image('/private/files/plant.jpg'))
+    def test_unicode_filenames_and_query_spaces_are_url_encoded(self):
+        self.assertEqual(self.image('/files/é.jpg?name=a b'),'https://example.com/files/%C3%A9.jpg?name=a%20b')
 if __name__=='__main__':unittest.main()

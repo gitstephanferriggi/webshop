@@ -38,4 +38,32 @@ class ClientTests(unittest.TestCase):
   self.response.content=b'{}';self.response.json.side_effect=None;self.response.json.return_value={'order_id':42,'items':[]}
   self.assertEqual(self.client.request(self.settings,'/genericClient/getOrderBasket',{})['order_id'],42)
 
+ def import_response(self, warnings, errors=None):
+  self.settings.vat_tag='bm_vat_0'
+  self.response.content=b'{}';self.response.json.side_effect=None
+  self.response.json.return_value={'data':{'state':'waiting_for_apply','warnings':warnings,'errors':errors or []}}
+ def test_confirmed_tag_warning_is_acknowledged(self):
+  self.import_response([{'message':'VAT tag "bm_vat_0" not found for SKU ITE-1'}])
+  result=self.client.request(self.settings,'/pim/v1/products/import/status/retrieve',{})
+  self.assertEqual(result['warnings'],[])
+  self.assertEqual(result['acknowledged_vat_warning_count'],1)
+ def test_unrelated_nested_warnings_are_retained(self):
+  warning={'message':'Image download failed'}
+  self.import_response([{'message':'VAT tag "bm_vat_0" not found for SKU ITE-1'},warning])
+  result=self.client.request(self.settings,'/pim/v1/products/import/status/retrieve',{})
+  self.assertEqual(result['warnings'],[warning])
+ def test_import_errors_survive_tag_acknowledgement(self):
+  error={'error_type':'invalid_url','skus':['ITE-1']}
+  self.import_response([{'message':'VAT tag "bm_vat_0" not found for SKU ITE-1'}],[error])
+  result=self.client.request(self.settings,'/pim/v1/products/import/status/retrieve',{})
+  self.assertEqual(result['errors'],[error])
+ def test_other_configured_tag_does_not_acknowledge_warning(self):
+  warning={'message':'VAT tag "bm_vat_0" not found for SKU ITE-1'}
+  self.import_response([warning]);self.settings.vat_tag='different'
+  self.assertEqual(self.client.request(self.settings,'/pim/v1/products/import/status/retrieve',{})['warnings'],[warning])
+ def test_warning_on_other_endpoint_is_still_rejected(self):
+  self.import_response([])
+  self.response.json.return_value={'warnings':[{'message':'VAT tag "bm_vat_0" not found for SKU ITE-1'}]}
+  with self.assertRaises(ValueError):self.client.request(self.settings,'/genericClient/getMenu',{})
+
 if __name__=='__main__':unittest.main()
