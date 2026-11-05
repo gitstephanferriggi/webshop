@@ -43,4 +43,56 @@ class SyncTests(unittest.TestCase):
   with patch.object(self.m,'snapshot',return_value={'products':[],'excluded':[{'item_code':'A'}]}),patch.object(self.m,'request',return_value={'affected_skus':0}):
    with self.assertRaisesRegex(ValueError,'verify Bolt availability'):self.m.step(s)
   self.f.db.set_single_value.assert_not_called()
+ def scheduled_tick(self):
+  self.f.get_single.return_value=NS(enabled=1,sync_catalogue=1,site_hostname='uat.example')
+  self.m.get_url.return_value='https://uat.example'
+  return patch('webshop.bolt_integration.entitlement.new_work_allowed',return_value=True)
+ def test_scheduled_lock_is_scoped_to_the_site(self):
+  cache=self.f.cache.return_value
+  cache.make_key.return_value=b'uat_db|callus-bolt-catalogue'
+  with self.scheduled_tick(),patch.object(self.m,'step') as step:
+   self.m.tick()
+  cache.make_key.assert_called_once_with('callus-bolt-catalogue')
+  cache.lock.assert_called_once_with(b'uat_db|callus-bolt-catalogue',timeout=240)
+  cache.lock.return_value.acquire.assert_called_once_with(blocking=False)
+  cache.lock.return_value.release.assert_called_once_with()
+  step.assert_called_once_with(self.f.get_single.return_value)
+  self.f.db.commit.assert_called_once_with()
+ def test_busy_site_skips_without_changing_sync_state(self):
+  lock=self.f.cache.return_value.lock.return_value
+  lock.acquire.return_value=False
+  with self.scheduled_tick(),patch.object(self.m,'step') as step:
+   self.m.tick()
+  step.assert_not_called();lock.release.assert_not_called()
+  self.f.db.commit.assert_not_called();self.f.db.rollback.assert_not_called()
+  self.f.db.set_single_value.assert_not_called();self.f.log_error.assert_not_called()
+ def test_sync_error_marks_review_and_releases_lock(self):
+  lock=self.f.cache.return_value.lock.return_value
+  with self.scheduled_tick(),patch.object(self.m,'step',side_effect=ValueError('Bolt request failed')):
+   self.m.tick()
+  self.f.db.rollback.assert_called_once_with()
+  self.f.db.set_single_value.assert_called_once_with('Callus Bolt Settings',{'sync_phase':'Review','sync_error':'Bolt request failed'})
+  lock.release.assert_called_once_with()
+ def test_other_site_can_sync_while_this_site_is_busy(self):
+  from threading import Lock
+  locks={}
+  class Cache:
+   def __init__(self,site):self.site=site
+   def make_key(self,key):return (self.site+'|'+key).encode()
+   def lock(self,key,**kwargs):return locks.setdefault(key,Lock())
+  uat=Cache('uat_db');production=Cache('production_db')
+  busy=uat.lock(uat.make_key('callus-bolt-catalogue'));busy.acquire()
+  with self.scheduled_tick(),patch.object(self.m,'step') as step:
+   self.f.cache.return_value=uat;self.m.tick();step.assert_not_called()
+   self.f.cache.return_value=production
+   self.f.get_single.return_value.site_hostname='production.example'
+   self.m.get_url.return_value='https://production.example'
+   self.m.tick();step.assert_called_once()
+  self.assertTrue(busy.locked());busy.release()
+  self.assertFalse(production.lock(production.make_key('callus-bolt-catalogue')).locked())
+ def test_cache_failure_is_not_hidden_as_a_busy_job(self):
+  self.f.cache.return_value.lock.return_value.acquire.side_effect=ConnectionError('Redis unavailable')
+  with self.scheduled_tick(),patch.object(self.m,'step') as step:
+   with self.assertRaisesRegex(ConnectionError,'Redis unavailable'):self.m.tick()
+  step.assert_not_called();self.f.db.set_single_value.assert_not_called()
 if __name__=='__main__':unittest.main()

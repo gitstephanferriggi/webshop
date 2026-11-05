@@ -42,8 +42,15 @@ def tick():
     from webshop.bolt_integration.entitlement import new_work_allowed
     if not new_work_allowed(s):
         return
-    # One worker owns each tick; network stages resume on later scheduler ticks.
-    with frappe.cache().lock('callus-bolt-catalogue',timeout=240,blocking_timeout=1):
+    # Redis.lock does not apply Frappe's site prefix automatically. Sites sharing
+    # a bench must not compete for the same catalogue lock.
+    cache = frappe.cache()
+    lock = cache.lock(cache.make_key('callus-bolt-catalogue'), timeout=240)
+    if not lock.acquire(blocking=False):
+        # Another worker for this site owns the sync. Keep its state intact and
+        # let the next scheduled tick retry; genuine stale syncs remain visible.
+        return
+    try:
         try:
             step(s)
             frappe.db.commit()
@@ -52,6 +59,8 @@ def tick():
             frappe.db.set_single_value('Callus Bolt Settings',{'sync_phase':'Review','sync_error':str(exc)[:1000]})
             frappe.db.commit()
             frappe.log_error(title='Bolt catalogue requires review',message=frappe.get_traceback())
+    finally:
+        lock.release()
 
 
 def step(s):
